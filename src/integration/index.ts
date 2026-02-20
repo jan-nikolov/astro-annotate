@@ -27,6 +27,7 @@ export function createIntegration(userConfig: AstroAnnotateConfig = {}): AstroIn
 
         resolvedConfig = {
           enabled,
+          mode: isDev ? 'dev' : 'deployed',
           storage: userConfig.storage ?? 'local',
           annotationsPath: userConfig.annotationsPath ?? DEFAULT_ANNOTATIONS_PATH,
         };
@@ -41,7 +42,7 @@ export function createIntegration(userConfig: AstroAnnotateConfig = {}): AstroIn
         // Inject client overlay script
         // At runtime, import.meta.url points to dist/index.js, client bundle is dist/client.js
         const clientPath = resolve(dirname(fileURLToPath(import.meta.url)), 'client.js');
-        injectScript('page', `import "${clientPath}";`);
+        injectScript('page', `window.__ASTRO_ANNOTATE_DEV__=${isDev};import("${clientPath}");`);
 
         logger.info('Overlay enabled');
       },

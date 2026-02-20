@@ -14,6 +14,7 @@ export class Overlay {
   private form: AnnotationForm;
   private pinManager: PinManager;
   private active = false;
+  private devMode = !!(window as any).__ASTRO_ANNOTATE_DEV__;
   private annotations: Annotation[] = [];
 
   constructor() {
@@ -33,7 +34,12 @@ export class Overlay {
     // Create components
     this.toolbar = new Toolbar(this.shadowRoot, (active) => this.setActive(active));
     this.highlighter = new Highlighter(this.shadowRoot);
-    this.form = new AnnotationForm(this.shadowRoot, () => this.onAnnotationCreated());
+    this.form = new AnnotationForm(
+      this.shadowRoot,
+      () => this.onAnnotationCreated(),
+      () => this.onFormClosed(),
+      this.devMode,
+    );
     this.pinManager = new PinManager(this.shadowRoot, () => this.loadAnnotations());
 
     // Load existing annotations
@@ -57,6 +63,9 @@ export class Overlay {
     window.addEventListener('resize', () => {
       this.renderPins();
     }, { passive: true });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', this.onKeyDown);
   }
 
   private setActive(active: boolean): void {
@@ -81,6 +90,9 @@ export class Overlay {
     // Ignore clicks on our own overlay
     if (this.host.contains(target) || this.host === target) return;
 
+    // Don't switch targets while form is open
+    if (this.form.isVisible()) return;
+
     e.preventDefault();
     e.stopPropagation();
 
@@ -89,6 +101,35 @@ export class Overlay {
     document.removeEventListener('mousemove', this.highlighter.onMouseMove);
 
     this.form.show(target);
+  };
+
+  private onKeyDown = (e: KeyboardEvent): void => {
+    // Don't intercept when user is typing in an external input
+    const active = document.activeElement;
+    const isExternalInput = active &&
+      (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' ||
+       (active as HTMLElement).isContentEditable) &&
+      active !== this.host && !this.host.contains(active);
+
+    // Alt+C: toggle annotation mode (Figma-inspired, e.code for layout-independence)
+    if (e.altKey && e.code === 'KeyC' && !isExternalInput) {
+      e.preventDefault();
+      this.toolbar.toggle();
+      return;
+    }
+
+    // Escape: close form or exit annotation mode
+    if (e.key === 'Escape') {
+      if (this.form.isVisible()) {
+        this.form.hide();
+        return;
+      }
+      if (this.active) {
+        this.toolbar.deactivate();
+        this.setActive(false);
+        return;
+      }
+    }
   };
 
   private async loadAnnotations(): Promise<void> {
@@ -111,13 +152,18 @@ export class Overlay {
   }
 
   private onAnnotationCreated(): void {
-    // Deactivate annotation mode, reload annotations
-    this.toolbar.deactivate();
-    this.setActive(false);
     this.loadAnnotations();
   }
 
+  private onFormClosed(): void {
+    // Re-enable highlighting if still in annotation mode
+    if (this.active) {
+      document.addEventListener('mousemove', this.highlighter.onMouseMove);
+    }
+  }
+
   destroy(): void {
+    document.removeEventListener('keydown', this.onKeyDown);
     this.setActive(false);
     this.toolbar.destroy();
     this.highlighter.destroy();

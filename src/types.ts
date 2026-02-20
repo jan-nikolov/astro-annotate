@@ -25,6 +25,7 @@ export interface AstroAnnotateConfig {
 
 export interface ResolvedConfig {
   enabled: boolean;
+  mode: 'dev' | 'deployed';
   storage: 'local';
   annotationsPath: string;
 }

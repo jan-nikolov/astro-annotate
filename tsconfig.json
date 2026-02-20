@@ -12,7 +12,7 @@
     "outDir": "dist",
     "rootDir": "src",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
-    "types": ["astro/client"]
+    "types": ["astro/client", "node"]
   },
   "include": ["src/**/*.ts"],
   "exclude": ["node_modules", "dist", "playground"]

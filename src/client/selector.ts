@@ -72,10 +72,11 @@ export function generateSelector(target: Element): string {
     }
 
     // Add nth-child if not unique enough
-    const parent = current.parentElement;
+    const parent: Element | null = current.parentElement;
     if (parent) {
+      const currentTag = current.tagName;
       const siblings = Array.from(parent.children).filter(
-        (s) => s.tagName === current!.tagName,
+        (s: Element) => s.tagName === currentTag,
       );
       if (siblings.length > 1) {
         const index = siblings.indexOf(current) + 1;

@@ -33,7 +33,7 @@ export class Toolbar {
     shadowRoot.appendChild(this.el);
   }
 
-  private toggle(): void {
+  toggle(): void {
     this.active = !this.active;
     this.el.classList.toggle('aa-active', this.active);
     this.label.textContent = this.active ? 'Stop' : 'Annotate';

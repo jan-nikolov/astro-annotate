@@ -5,16 +5,20 @@ import { generateSelector, getElementText } from './selector.js';
 export class AnnotationForm {
   private container: HTMLElement;
   private onSubmitted: () => void;
+  private onClosed: () => void;
 
   constructor(
     private shadowRoot: ShadowRoot,
     onSubmitted: () => void,
+    onClosed: () => void,
+    private devMode: boolean,
   ) {
     this.container = document.createElement('div');
     this.container.className = 'aa-form-container';
     this.container.style.display = 'none';
     this.shadowRoot.appendChild(this.container);
     this.onSubmitted = onSubmitted;
+    this.onClosed = onClosed;
   }
 
   show(target: Element): void {
@@ -49,7 +53,7 @@ export class AnnotationForm {
         <button class="aa-form-close" data-action="close">&times;</button>
       </div>
       <div class="aa-form-body">
-        <input class="aa-input" type="text" placeholder="Your name" data-field="author" value="" />
+        ${this.devMode ? '' : '<input class="aa-input" type="text" placeholder="Your name" data-field="author" value="" />'}
         <textarea class="aa-textarea" placeholder="What should be changed?" data-field="text"></textarea>
         <div class="aa-form-actions">
           <button class="aa-btn aa-btn-secondary" data-action="close">Cancel</button>
@@ -82,7 +86,9 @@ export class AnnotationForm {
 
   private async submit(selector: string, elementTag: string, elementText: string): Promise<void> {
     const text = (this.container.querySelector('[data-field="text"]') as HTMLTextAreaElement)?.value?.trim();
-    const author = (this.container.querySelector('[data-field="author"]') as HTMLInputElement)?.value?.trim();
+    const author = this.devMode
+      ? 'Developer'
+      : (this.container.querySelector('[data-field="author"]') as HTMLInputElement)?.value?.trim();
 
     if (!text) return;
 
@@ -120,8 +126,10 @@ export class AnnotationForm {
   }
 
   hide(): void {
+    if (this.container.style.display === 'none') return;
     this.container.style.display = 'none';
     this.container.innerHTML = '';
+    this.onClosed();
   }
 
   isVisible(): boolean {

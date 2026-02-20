@@ -5,9 +5,8 @@ let overlay: Overlay | null = null;
 
 function init(): void {
   // Clean up previous instance (View Transitions)
-  const existing = document.getElementById(SHADOW_ROOT_ID);
-  if (existing) {
-    existing.remove();
+  if (overlay) {
+    overlay.destroy();
     overlay = null;
   }
 

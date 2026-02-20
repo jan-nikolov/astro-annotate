@@ -7,6 +7,8 @@ import { astroAnnotateVitePlugin } from './vite-plugin.js';
 import { LocalStorage } from '../storage/local.js';
 import { registerDevMiddleware } from '../server/dev-middleware.js';
 
+const ANNOTATE_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="12" y1="6" x2="12" y2="12"/></svg>`;
+
 export function createIntegration(userConfig: AstroAnnotateConfig = {}): AstroIntegration {
   let resolvedConfig: ResolvedConfig;
   let projectRoot: string;
@@ -14,7 +16,7 @@ export function createIntegration(userConfig: AstroAnnotateConfig = {}): AstroIn
   return {
     name: 'astro-annotate',
     hooks: {
-      'astro:config:setup'({ config, command, updateConfig, injectScript, logger }) {
+      'astro:config:setup'({ config, command, updateConfig, injectScript, addDevToolbarApp, logger }) {
         projectRoot = fileURLToPath(config.root);
 
         const isDev = command === 'dev' || command === 'preview';
@@ -38,6 +40,17 @@ export function createIntegration(userConfig: AstroAnnotateConfig = {}): AstroIn
             plugins: [astroAnnotateVitePlugin(resolvedConfig)],
           },
         });
+
+        // Register Dev Toolbar app (icon in Astro toolbar)
+        if (isDev) {
+          const toolbarAppPath = resolve(dirname(fileURLToPath(import.meta.url)), 'toolbar-app.js');
+          addDevToolbarApp({
+            id: 'astro-annotate',
+            name: 'Annotate',
+            icon: ANNOTATE_ICON,
+            entrypoint: toolbarAppPath,
+          });
+        }
 
         // Inject client overlay script
         // At runtime, import.meta.url points to dist/index.js, client bundle is dist/client.js

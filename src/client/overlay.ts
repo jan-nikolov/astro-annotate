@@ -1,7 +1,6 @@
 import type { Annotation } from '../types.js';
 import { SHADOW_ROOT_ID, API_ANNOTATIONS } from '../constants.js';
 import { OVERLAY_STYLES } from './styles.js';
-import { Toolbar } from './toolbar.js';
 import { Highlighter } from './highlighter.js';
 import { AnnotationForm } from './form.js';
 import { PinManager } from './pin.js';
@@ -9,7 +8,6 @@ import { PinManager } from './pin.js';
 export class Overlay {
   private host: HTMLElement;
   private shadowRoot: ShadowRoot;
-  private toolbar: Toolbar;
   private highlighter: Highlighter;
   private form: AnnotationForm;
   private pinManager: PinManager;
@@ -32,7 +30,6 @@ export class Overlay {
     this.shadowRoot.appendChild(style);
 
     // Create components
-    this.toolbar = new Toolbar(this.shadowRoot, (active) => this.setActive(active));
     this.highlighter = new Highlighter(this.shadowRoot);
     this.form = new AnnotationForm(
       this.shadowRoot,
@@ -41,6 +38,9 @@ export class Overlay {
       this.devMode,
     );
     this.pinManager = new PinManager(this.shadowRoot, () => this.loadAnnotations());
+
+    // Listen for toggle from Dev Toolbar
+    window.addEventListener('aa:toggle', this.onToolbarToggle);
 
     // Load existing annotations
     this.loadAnnotations();
@@ -84,6 +84,10 @@ export class Overlay {
     }
   }
 
+  private onToolbarToggle = ((e: CustomEvent) => {
+    this.setActive(e.detail.active);
+  }) as EventListener;
+
   private onElementClick = (e: MouseEvent): void => {
     const target = e.target as Element;
 
@@ -114,7 +118,9 @@ export class Overlay {
     // Alt+C: toggle annotation mode (Figma-inspired, e.code for layout-independence)
     if (e.altKey && e.code === 'KeyC' && !isExternalInput) {
       e.preventDefault();
-      this.toolbar.toggle();
+      const newActive = !this.active;
+      this.setActive(newActive);
+      window.dispatchEvent(new CustomEvent('aa:state-changed', { detail: { active: newActive } }));
       return;
     }
 
@@ -125,8 +131,8 @@ export class Overlay {
         return;
       }
       if (this.active) {
-        this.toolbar.deactivate();
         this.setActive(false);
+        window.dispatchEvent(new CustomEvent('aa:state-changed', { detail: { active: false } }));
         return;
       }
     }
@@ -140,7 +146,8 @@ export class Overlay {
 
       const data = await res.json();
       this.annotations = data.annotations || [];
-      this.toolbar.updateCount(this.annotations.filter((a) => a.status === 'open').length);
+      const openCount = this.annotations.filter((a) => a.status === 'open').length;
+      window.dispatchEvent(new CustomEvent('aa:count', { detail: { count: openCount } }));
       this.renderPins();
     } catch {
       // API not available yet, will retry
@@ -164,8 +171,11 @@ export class Overlay {
 
   destroy(): void {
     document.removeEventListener('keydown', this.onKeyDown);
+    window.removeEventListener('aa:toggle', this.onToolbarToggle);
+    if (this.active) {
+      window.dispatchEvent(new CustomEvent('aa:state-changed', { detail: { active: false } }));
+    }
     this.setActive(false);
-    this.toolbar.destroy();
     this.highlighter.destroy();
     this.form.destroy();
     this.pinManager.destroy();

@@ -1,6 +1,6 @@
 {
   "name": "astro-annotate",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "Visual annotation overlay for Astro staging sites. Clients annotate HTML elements directly in the browser. Annotations stored as structured JSON, readable by developers and LLMs.",
   "type": "module",
   "main": "./dist/index.js",

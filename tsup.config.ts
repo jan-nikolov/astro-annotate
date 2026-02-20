@@ -4,6 +4,7 @@ export default defineConfig({
   entry: {
     index: 'src/index.ts',
     client: 'src/client/index.ts',
+    'toolbar-app': 'src/client/toolbar-app.ts',
   },
   format: ['esm'],
   dts: { entry: 'src/index.ts' },

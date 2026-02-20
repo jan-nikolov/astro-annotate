@@ -23,6 +23,7 @@ See `docs/research-feb-2026.md` for details on market, competition, Astro+Cloudf
 | Annotation Mode MVP | Developer mode only | Element-based (hover highlights, click annotates). Client mode (free coordinates) possibly later. |
 | Auth (Phase 2) | Simple password + session cookie | HMAC-signed, 24h TTL. No OAuth, no user management. Password via env variable. |
 | Extensibility | Astro-first, core framework-agnostic | Overlay in vanilla JS, theoretically WP-compatible. But only Astro integration built. |
+| Dev Toolbar | Native Astro Dev Toolbar API | First-class icon, consistent UX, no custom toolbar UI. Two runtimes (toolbar app + overlay) communicate via CustomEvents. |
 
 ## Commands
 
@@ -41,7 +42,7 @@ See `docs/research-feb-2026.md` for details on market, competition, Astro+Cloudf
 
 ## Phases
 
-1. **Phase 1 (MVP):** Done. Local dev mode. Overlay + JSON storage. Keyboard shortcuts (Alt+C, Escape). Works in `astro dev`.
+1. **Phase 1 (MVP):** Done. Local dev mode. Overlay + JSON storage + Astro Dev Toolbar integration. Keyboard shortcuts (Alt+C, Escape). Works in `astro dev`.
 2. **Phase 2:** Deployed mode on Cloudflare Pages + password auth.
 3. **Phase 3:** Polish (screenshots, CLI export, mobile UX, docs, launch).
 
@@ -67,15 +68,19 @@ See `docs/research-feb-2026.md` for details on market, competition, Astro+Cloudf
 
 - `src/integration/index.ts` — Astro integration hooks (config:setup, server:setup)
 - `src/client/overlay.ts` — Main orchestrator (Shadow DOM, keyboard, components)
+- `src/client/toolbar-app.ts` — Astro Dev Toolbar App (icon toggle, notification dot)
+- `src/client/highlighter.ts` — Element hover highlight during annotation mode
+- `src/client/pin.ts` — Pin markers + detail popup for existing annotations
 - `src/client/form.ts` — Annotation form (devMode-aware)
 - `src/client/selector.ts` — CSS selector generation
+- `src/integration/vite-plugin.ts` — Virtual module (`virtual:astro-annotate/config`)
 - `src/server/dev-middleware.ts` — Vite middleware (REST API)
 - `src/storage/local.ts` — JSON file storage
 - `playground/` — Test Astro site with 2 pages
 
 ## Technical Details
 
-- Build: tsup (ESM only)
+- Build: tsup (ESM only). Entry points: `index` (integration), `client` (overlay), `toolbar-app` (Dev Toolbar)
 - Tests: planned — Vitest (unit + integration), Playwright (E2E). Not yet implemented (see Issue #5).
 - Astro peer dependency: ^4.0.0 || ^5.0.0 || ^6.0.0
 - Script injection stage: `page` (not `page-ssr`)
@@ -83,6 +88,8 @@ See `docs/research-feb-2026.md` for details on market, competition, Astro+Cloudf
 - CSS selector priority: #id → [data-testid] → tag+class → nth-child
 - Filter Astro-generated classes (astro-*) from selectors
 - Dev mode detection: `window.__ASTRO_ANNOTATE_DEV__` global (set via `injectScript`, read in client)
+- Dev Toolbar: `addDevToolbarApp()` in integration, `toolbar-app.ts` as separate tsup entry point
+- Toolbar ↔ Overlay communication: CustomEvents (`aa:toggle`, `aa:state-changed`, `aa:count`). Loop prevention via `syncing` flag in toolbar-app.
 - Keyboard shortcuts: Alt+C (toggle mode), Escape (close form / exit mode), Ctrl+Enter (submit)
 
 ## Gotchas

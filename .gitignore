@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.astro/
+annotations.json
+*.tgz
+.DS_Store
+
+# Claude Code
+CLAUDE.md
+.claude/
+
+# Playground
+playground/node_modules/
+playground/.astro/
+playground/annotations.json

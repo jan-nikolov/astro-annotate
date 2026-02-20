@@ -1,0 +1,109 @@
+---
+const title = 'astro-annotate Playground';
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { font-family: system-ui, sans-serif; color: #1a1a2e; }
+      .hero {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 80px 20px;
+        text-align: center;
+      }
+      .hero h1 { font-size: 3rem; margin-bottom: 16px; }
+      .hero p { font-size: 1.25rem; opacity: 0.9; max-width: 600px; margin: 0 auto; }
+      .features {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 24px;
+        padding: 60px 20px;
+        max-width: 1000px;
+        margin: 0 auto;
+      }
+      .card {
+        background: #f8f9fa;
+        border-radius: 12px;
+        padding: 24px;
+      }
+      .card h3 { margin-bottom: 8px; }
+      .card p { color: #666; line-height: 1.6; }
+      .cta {
+        text-align: center;
+        padding: 60px 20px;
+        background: #1a1a2e;
+        color: white;
+      }
+      .cta h2 { font-size: 2rem; margin-bottom: 16px; }
+      .cta a {
+        display: inline-block;
+        background: #e94560;
+        color: white;
+        padding: 12px 32px;
+        border-radius: 8px;
+        text-decoration: none;
+        font-weight: 600;
+        margin-top: 16px;
+      }
+      nav {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 20px;
+        background: white;
+        border-bottom: 1px solid #eee;
+      }
+      nav a { color: #1a1a2e; text-decoration: none; margin-left: 24px; }
+      footer {
+        text-align: center;
+        padding: 24px;
+        color: #888;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <strong>Playground</strong>
+      <div>
+        <a href="/">Home</a>
+        <a href="/about">About</a>
+      </div>
+    </nav>
+
+    <section class="hero">
+      <h1>Welcome to the Playground</h1>
+      <p>This is a test page for astro-annotate. Try hovering over elements and creating annotations!</p>
+    </section>
+
+    <section class="features">
+      <div class="card" data-testid="feature-1">
+        <h3>Element Selection</h3>
+        <p>Click the Annotate button, then hover over any element on the page. You'll see it highlighted with its CSS selector.</p>
+      </div>
+      <div class="card" data-testid="feature-2">
+        <h3>Quick Feedback</h3>
+        <p>Click an element to open the annotation form. Write your feedback and submit. It's saved instantly as JSON.</p>
+      </div>
+      <div class="card" data-testid="feature-3">
+        <h3>LLM Ready</h3>
+        <p>Annotations are stored in annotations.json with CSS selectors. Feed them directly to Claude Code or Cursor.</p>
+      </div>
+    </section>
+
+    <section class="cta">
+      <h2>Ready to annotate?</h2>
+      <p>Click the button in the bottom-right corner to start.</p>
+      <a href="/about">Learn more</a>
+    </section>
+
+    <footer>
+      <p>astro-annotate playground — for testing purposes only</p>
+    </footer>
+  </body>
+</html>

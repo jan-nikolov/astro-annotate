@@ -1,0 +1,46 @@
+{
+  "name": "astro-annotate",
+  "version": "0.1.0",
+  "description": "Visual annotation overlay for Astro staging sites. Clients annotate HTML elements directly in the browser. Annotations stored as structured JSON, readable by developers and LLMs.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src/routes"
+  ],
+  "keywords": [
+    "astro-integration",
+    "withastro",
+    "annotations",
+    "visual-feedback",
+    "llm",
+    "staging",
+    "review"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "astro": "^4.0.0 || ^5.0.0 || ^6.0.0"
+  },
+  "devDependencies": {
+    "astro": "^5.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.5.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jan-nikolov/astro-annotate"
+  },
+  "author": "jan-nikolov"
+}

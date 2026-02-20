@@ -6,7 +6,6 @@ annotations.json
 .DS_Store
 
 # Claude Code
-CLAUDE.md
 .claude/
 
 # Playground

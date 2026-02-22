@@ -1,6 +1,7 @@
 import type { CreateAnnotationPayload } from '../types.js';
 import { API_ANNOTATIONS } from '../constants.js';
 import { generateSelector, getElementText } from './selector.js';
+import { escapeHtml } from './utils.js';
 
 export class AnnotationForm {
   private container: HTMLElement;
@@ -48,7 +49,7 @@ export class AnnotationForm {
       <div class="aa-form-header">
         <div>
           <div class="aa-form-header-title">New Annotation</div>
-          <div class="aa-form-header-selector">${this.escapeHtml(selector)}</div>
+          <div class="aa-form-header-selector">${escapeHtml(selector)}</div>
         </div>
         <button class="aa-form-close" data-action="close">&times;</button>
       </div>
@@ -136,9 +137,6 @@ export class AnnotationForm {
     return this.container.style.display !== 'none';
   }
 
-  private escapeHtml(str: string): string {
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
 
   destroy(): void {
     this.container.remove();

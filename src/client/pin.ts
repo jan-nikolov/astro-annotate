@@ -1,10 +1,12 @@
 import type { Annotation } from '../types.js';
 import { API_ANNOTATIONS } from '../constants.js';
+import { escapeHtml } from './utils.js';
 
 export class PinManager {
   private pins: HTMLElement[] = [];
   private detailPopup: HTMLElement;
   private onChanged: () => void;
+  private panelSide: 'left' | 'right' | null = null;
 
   constructor(
     private shadowRoot: ShadowRoot,
@@ -17,7 +19,8 @@ export class PinManager {
     this.onChanged = onChanged;
   }
 
-  render(annotations: Annotation[]): void {
+  render(annotations: Annotation[], panelSide: 'left' | 'right' | null = null): void {
+    this.panelSide = panelSide;
     this.clearPins();
 
     annotations.forEach((annotation, index) => {
@@ -28,12 +31,31 @@ export class PinManager {
       pin.className = `aa-pin${annotation.status === 'resolved' ? ' aa-resolved' : ''}`;
       pin.innerHTML = `<span class="aa-pin-number">${index + 1}</span>`;
 
-      // Position pin at top-right corner of element
+      // Position pin — shift away from panel side and FAB
       const updatePosition = () => {
         const rect = el.getBoundingClientRect();
         pin.style.position = 'fixed';
-        pin.style.top = `${Math.max(0, rect.top - 10)}px`;
-        pin.style.left = `${Math.max(0, rect.right - 24)}px`;
+        const pinTop = Math.max(0, rect.top - 10);
+        let pinLeft: number;
+        if (this.panelSide === 'right') {
+          pinLeft = Math.max(10, rect.left - 32);
+        } else {
+          pinLeft = Math.max(10, rect.right - 24);
+        }
+
+        // FAB collision check (FAB: bottom: 72px, right: 16px, 32×32)
+        const fabLeft = window.innerWidth - 48;
+        const fabTop = window.innerHeight - 104;
+        const fabRight = window.innerWidth - 16;
+        const fabBottom = window.innerHeight - 72;
+
+        if (pinTop + 28 > fabTop && pinTop < fabBottom &&
+            pinLeft + 28 > fabLeft && pinLeft < fabRight) {
+          pinLeft = fabLeft - 32;
+        }
+
+        pin.style.top = `${pinTop}px`;
+        pin.style.left = `${pinLeft}px`;
       };
       updatePosition();
 
@@ -74,15 +96,15 @@ export class PinManager {
     this.detailPopup.innerHTML = `
       <div class="aa-pin-detail-header">
         <div>
-          <div class="aa-form-header-title">#${index + 1} — ${this.escapeHtml(annotation.author)}</div>
+          <div class="aa-form-header-title">#${index + 1} — ${escapeHtml(annotation.author)}</div>
           <div class="aa-pin-detail-meta">${date} · ${annotation.device} · ${annotation.status}</div>
         </div>
         <button class="aa-form-close" data-action="close-detail">&times;</button>
       </div>
       <div class="aa-pin-detail-body">
-        <div class="aa-pin-detail-text">${this.escapeHtml(annotation.text)}</div>
+        <div class="aa-pin-detail-text">${escapeHtml(annotation.text)}</div>
         <div class="aa-pin-detail-info">
-          <div class="aa-pin-detail-selector">${this.escapeHtml(annotation.selector)}</div>
+          <div class="aa-pin-detail-selector">${escapeHtml(annotation.selector)}</div>
         </div>
       </div>
       <div class="aa-pin-detail-actions">
@@ -136,10 +158,6 @@ export class PinManager {
     this.pins.forEach((pin) => pin.remove());
     this.pins = [];
     this.hideDetail();
-  }
-
-  private escapeHtml(str: string): string {
-    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
   destroy(): void {

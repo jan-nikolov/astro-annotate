@@ -1,4 +1,5 @@
 ---
+import { ClientRouter } from 'astro:transitions';
 const title = 'astro-annotate Playground';
 ---
 
@@ -7,6 +8,7 @@ const title = 'astro-annotate Playground';
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
+    <ClientRouter />
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body { font-family: system-ui, sans-serif; color: #1a1a2e; }

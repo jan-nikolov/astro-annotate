@@ -349,7 +349,7 @@ export class AnnotationPanel {
     const el = document.querySelector(selector);
     if (!el) return;
 
-    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.scrollIntoView({ behavior: 'instant', block: 'center' });
 
     // Flash highlight — rendered in Shadow DOM to avoid host CSS interference
     // and ensure cleanup on destroy/view transitions

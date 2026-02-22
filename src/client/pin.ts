@@ -6,6 +6,7 @@ export class PinManager {
   private pins: HTMLElement[] = [];
   private detailPopup: HTMLElement;
   private onChanged: () => void;
+  private panelSide: 'left' | 'right' | null = null;
 
   constructor(
     private shadowRoot: ShadowRoot,
@@ -17,8 +18,6 @@ export class PinManager {
     this.shadowRoot.appendChild(this.detailPopup);
     this.onChanged = onChanged;
   }
-
-  private panelSide: 'left' | 'right' | null = null;
 
   render(annotations: Annotation[], panelSide: 'left' | 'right' | null = null): void {
     this.panelSide = panelSide;

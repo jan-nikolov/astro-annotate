@@ -16,7 +16,7 @@ See `docs/research-feb-2026.md` for details on market, competition, Astro+Cloudf
 |---|---|---|
 | Name | `astro-annotate` | "review" too generic (sounds like code review), "feedback" too generic (NPS surveys), "annotate" describes the exact action |
 | Packaging | Single npm package | No monorepo overhead, CF adapter via dynamic import, tree-shaking |
-| Client UI | Vanilla TypeScript | 0 dependencies, ~25KB bundle, full control |
+| Client UI | Vanilla TypeScript | 0 dependencies, ~44KB bundle, full control |
 | CSS Isolation | Shadow DOM | Bidirectional isolation (host ↔ overlay), Tailwind on host unaffected |
 | Local Storage | JSON file (annotations.json) | Directly readable by dev + LLM, no export step needed |
 | LLM Integration | Read JSON directly | No markdown export, no MCP server. JSON is machine-readable enough. CLI export as future option. |
@@ -42,7 +42,7 @@ See `docs/research-feb-2026.md` for details on market, competition, Astro+Cloudf
 
 ## Phases
 
-1. **Phase 1 (MVP):** Done. Local dev mode. Overlay + JSON storage + Astro Dev Toolbar integration. Keyboard shortcuts (Alt+C, Escape). Works in `astro dev`.
+1. **Phase 1 (MVP):** Done. Local dev mode. Overlay + JSON storage + Astro Dev Toolbar integration + Annotations Panel. Keyboard shortcuts (Alt+C, Alt+L, Escape). Works in `astro dev`.
 2. **Phase 2:** Deployed mode on Cloudflare Pages + password auth.
 3. **Phase 3:** Polish (screenshots, CLI export, mobile UX, docs, launch).
 
@@ -70,8 +70,11 @@ See `docs/research-feb-2026.md` for details on market, competition, Astro+Cloudf
 - `src/client/overlay.ts` — Main orchestrator (Shadow DOM, keyboard, components)
 - `src/client/toolbar-app.ts` — Astro Dev Toolbar App (icon toggle, notification dot)
 - `src/client/highlighter.ts` — Element hover highlight during annotation mode
+- `src/client/panel.ts` — Annotations sidebar panel (filter, inline edit, bulk resolve, docking)
 - `src/client/pin.ts` — Pin markers + detail popup for existing annotations
 - `src/client/form.ts` — Annotation form (devMode-aware)
+- `src/client/utils.ts` — Shared utilities (escapeHtml)
+- `src/client/index.ts` — Client entry point (init, sessionStorage persistence, View Transition support)
 - `src/client/selector.ts` — CSS selector generation
 - `src/integration/vite-plugin.ts` — Virtual module (`virtual:astro-annotate/config`)
 - `src/server/dev-middleware.ts` — Vite middleware (REST API)
@@ -90,7 +93,7 @@ See `docs/research-feb-2026.md` for details on market, competition, Astro+Cloudf
 - Dev mode detection: `window.__ASTRO_ANNOTATE_DEV__` global (set via `injectScript`, read in client)
 - Dev Toolbar: `addDevToolbarApp()` in integration, `toolbar-app.ts` as separate tsup entry point
 - Toolbar ↔ Overlay communication: CustomEvents (`aa:toggle`, `aa:state-changed`, `aa:count`). Loop prevention via `syncing` flag in toolbar-app.
-- Keyboard shortcuts: Alt+C (toggle mode), Escape (close form / exit mode), Ctrl+Enter (submit)
+- Keyboard shortcuts: Alt+C (toggle mode), Alt+L (toggle panel), Escape (close form / panel / exit mode), Ctrl+Enter (submit)
 
 ## Gotchas
 
@@ -98,3 +101,5 @@ See `docs/research-feb-2026.md` for details on market, competition, Astro+Cloudf
 - Keyboard shortcuts with Alt/Option: `e.key` returns special characters on macOS (e.g. Option+C = ç). Always use `e.code` (e.g. `KeyC`).
 - Shadow DOM event retargeting: Keyboard events bubble to document, but `event.target` gets retargeted to host element. Register listeners on `document`, not on shadow root.
 - View Transitions: On `astro:page-load`, must call `overlay.destroy()` (not just remove DOM), otherwise document-level listeners leak.
+- Module-level variables: Do NOT survive full page reloads (only View Transitions). Use `sessionStorage` for state that must persist across navigations.
+- Playground View Transitions: Both playground pages need `<ClientRouter />` (Astro 5+) for SPA navigation, otherwise every link is a full reload.

@@ -4,6 +4,7 @@ import { OVERLAY_STYLES } from './styles.js';
 import { Highlighter } from './highlighter.js';
 import { AnnotationForm } from './form.js';
 import { PinManager } from './pin.js';
+import { AnnotationPanel } from './panel.js';
 
 export class Overlay {
   private host: HTMLElement;
@@ -11,9 +12,11 @@ export class Overlay {
   private highlighter: Highlighter;
   private form: AnnotationForm;
   private pinManager: PinManager;
+  private panel: AnnotationPanel;
   private active = false;
   private devMode = !!(window as any).__ASTRO_ANNOTATE_DEV__;
   private annotations: Annotation[] = [];
+  private lastOpenedUI: 'panel' | 'form' | null = null;
 
   constructor() {
     // Create host element
@@ -38,6 +41,11 @@ export class Overlay {
       this.devMode,
     );
     this.pinManager = new PinManager(this.shadowRoot, () => this.loadAnnotations());
+    this.panel = new AnnotationPanel(
+      this.shadowRoot,
+      () => this.loadAnnotations(),
+      () => this.renderPins(),
+    );
 
     // Listen for toggle from Dev Toolbar
     window.addEventListener('aa:toggle', this.onToolbarToggle);
@@ -105,6 +113,7 @@ export class Overlay {
     document.removeEventListener('mousemove', this.highlighter.onMouseMove);
 
     this.form.show(target);
+    this.lastOpenedUI = 'form';
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
@@ -124,12 +133,30 @@ export class Overlay {
       return;
     }
 
-    // Escape: close form or exit annotation mode
+    // Alt+L: toggle annotation panel
+    if (e.altKey && e.code === 'KeyL' && !isExternalInput) {
+      if (this.panel.isEditing()) return;
+      e.preventDefault();
+      this.panel.toggle();
+      this.lastOpenedUI = this.panel.isVisible() ? 'panel' : null;
+      return;
+    }
+
+    // Escape: close most recently opened UI first
     if (e.key === 'Escape') {
-      if (this.form.isVisible()) {
+      if (this.lastOpenedUI === 'form' && this.form.isVisible()) {
         this.form.hide();
+        this.lastOpenedUI = this.panel.isVisible() ? 'panel' : null;
         return;
       }
+      if (this.lastOpenedUI === 'panel' && this.panel.isVisible()) {
+        this.panel.hide();
+        this.lastOpenedUI = this.form.isVisible() ? 'form' : null;
+        return;
+      }
+      // Fallback: close whatever is visible
+      if (this.panel.isVisible()) { this.panel.hide(); return; }
+      if (this.form.isVisible()) { this.form.hide(); return; }
       if (this.active) {
         this.setActive(false);
         window.dispatchEvent(new CustomEvent('aa:state-changed', { detail: { active: false } }));
@@ -149,13 +176,15 @@ export class Overlay {
       const openCount = this.annotations.filter((a) => a.status === 'open').length;
       window.dispatchEvent(new CustomEvent('aa:count', { detail: { count: openCount } }));
       this.renderPins();
+      this.panel.update(this.annotations);
     } catch {
       // API not available yet, will retry
     }
   }
 
   private renderPins(): void {
-    this.pinManager.render(this.annotations);
+    const panelSide = this.panel.isVisible() ? this.panel.getSide() : null;
+    this.pinManager.render(this.annotations, panelSide);
   }
 
   private onAnnotationCreated(): void {
@@ -169,6 +198,14 @@ export class Overlay {
     }
   }
 
+  getPanelState(): { visible: boolean; filter: string; side: string } {
+    return this.panel.getState();
+  }
+
+  restorePanelState(state: { visible: boolean; filter: string; side: string }): void {
+    this.panel.restoreState(state);
+  }
+
   destroy(): void {
     document.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('aa:toggle', this.onToolbarToggle);
@@ -179,6 +216,7 @@ export class Overlay {
     this.highlighter.destroy();
     this.form.destroy();
     this.pinManager.destroy();
+    this.panel.destroy();
     this.host.remove();
   }
 }

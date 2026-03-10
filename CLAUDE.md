@@ -16,7 +16,7 @@ See `docs/research-feb-2026.md` for details on market, competition, Astro+Cloudf
 |---|---|---|
 | Name | `astro-annotate` | "review" too generic (sounds like code review), "feedback" too generic (NPS surveys), "annotate" describes the exact action |
 | Packaging | Single npm package | No monorepo overhead, CF adapter via dynamic import, tree-shaking |
-| Client UI | Vanilla TypeScript | 0 dependencies, ~44KB bundle, full control |
+| Client UI | Vanilla TypeScript | 0 dependencies, ~15KB gzipped (75KB raw), full control |
 | CSS Isolation | Shadow DOM | Bidirectional isolation (host ↔ overlay), Tailwind on host unaffected |
 | Local Storage | JSON file (annotations.json) | Directly readable by dev + LLM, no export step needed |
 | LLM Integration | Read JSON directly | No markdown export, no MCP server. JSON is machine-readable enough. CLI export as future option. |

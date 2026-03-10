@@ -45,5 +45,9 @@
     "type": "git",
     "url": "https://github.com/jan-nikolov/astro-annotate"
   },
+  "homepage": "https://github.com/jan-nikolov/astro-annotate#readme",
+  "bugs": {
+    "url": "https://github.com/jan-nikolov/astro-annotate/issues"
+  },
   "author": "jan-nikolov"
 }

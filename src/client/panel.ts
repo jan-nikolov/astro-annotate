@@ -76,6 +76,21 @@ export class AnnotationPanel {
     return this.side;
   }
 
+  setCompact(compact: boolean): void {
+    if (compact) {
+      this.container.classList.add('aa-panel-compact');
+    } else {
+      this.container.classList.remove('aa-panel-compact');
+    }
+    this.onVisibilityChanged();
+  }
+
+  setSide(side: SideValue): void {
+    this.side = side;
+    if (this.visible) this.render();
+    this.onVisibilityChanged();
+  }
+
   getState(): { visible: boolean; filter: FilterValue; side: SideValue } {
     return { visible: this.visible, filter: this.filter, side: this.side };
   }

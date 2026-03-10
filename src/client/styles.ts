@@ -210,7 +210,7 @@ export const OVERLAY_STYLES = `
     width: 28px;
     height: 28px;
     border-radius: 50% 50% 50% 0;
-    background: #e94560;
+    background: #d4687a;
     color: #fff;
     display: flex;
     align-items: center;
@@ -219,23 +219,49 @@ export const OVERLAY_STYLES = `
     font-weight: 700;
     cursor: pointer;
     transform: rotate(-45deg);
-    box-shadow: 0 2px 8px rgba(233, 69, 96, 0.4);
+    box-shadow: 0 2px 6px rgba(212, 104, 122, 0.3);
     transition: transform 0.15s, box-shadow 0.15s;
     z-index: 2147483645;
   }
 
   .aa-pin:hover {
     transform: rotate(-45deg) scale(1.15);
-    box-shadow: 0 4px 12px rgba(233, 69, 96, 0.5);
+    box-shadow: 0 3px 10px rgba(212, 104, 122, 0.45);
+  }
+
+  /* Point LEFT: pin is on right side of element */
+  .aa-pin.aa-pin-point-left {
+    transform: rotate(45deg);
+  }
+
+  .aa-pin.aa-pin-point-left:hover {
+    transform: rotate(45deg) scale(1.15);
+  }
+
+  /* Point RIGHT: pin is on left side of element */
+  .aa-pin.aa-pin-point-right {
+    transform: rotate(-135deg);
+  }
+
+  .aa-pin.aa-pin-point-right:hover {
+    transform: rotate(-135deg) scale(1.15);
   }
 
   .aa-pin.aa-resolved {
-    background: #2ecc71;
-    box-shadow: 0 2px 8px rgba(46, 204, 113, 0.4);
+    background: #6abf8a;
+    box-shadow: 0 2px 6px rgba(106, 191, 138, 0.3);
   }
 
   .aa-pin-number {
     transform: rotate(45deg);
+  }
+
+  .aa-pin.aa-pin-point-left .aa-pin-number {
+    transform: rotate(-45deg);
+  }
+
+  .aa-pin.aa-pin-point-right .aa-pin-number {
+    transform: rotate(135deg);
   }
 
   /* Pin Detail Popup */
@@ -636,6 +662,30 @@ export const OVERLAY_STYLES = `
     line-height: 1;
   }
 
+  /* Annotate FAB (upper button) */
+  .aa-annotate-fab {
+    position: fixed;
+    bottom: 112px;
+    right: 16px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #1a1a2e;
+    color: #fff;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    z-index: 2147483647;
+    transition: background 0.15s;
+  }
+
+  .aa-annotate-fab:hover {
+    background: #e94560;
+  }
+
   /* FAB Shortcut Label */
   .aa-fab-label {
     position: fixed;
@@ -795,6 +845,15 @@ export const OVERLAY_STYLES = `
     }
 
     .aa-panel-fab.aa-fab-active {
+      background: #e94560;
+    }
+
+    .aa-annotate-fab {
+      background: #2d2d3f;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    }
+
+    .aa-annotate-fab:hover {
       background: #e94560;
     }
 

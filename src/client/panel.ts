@@ -8,6 +8,7 @@ type SideValue = 'right' | 'left';
 export class AnnotationPanel {
   private container: HTMLElement;
   private fab: HTMLElement;
+  private annotateFab: HTMLElement;
   private label: HTMLElement;
   private visible = false;
   private filter: FilterValue = 'open';
@@ -18,6 +19,7 @@ export class AnnotationPanel {
   private onChanged: () => void;
   private onVisibilityChanged: () => void;
   private onExitAnnotationMode: (() => void) | null = null;
+  private onEnterAnnotationMode: (() => void) | null = null;
 
   constructor(
     private shadowRoot: ShadowRoot,
@@ -35,7 +37,17 @@ export class AnnotationPanel {
     this.container.addEventListener('keydown', this.onKeyDown);
     this.shadowRoot.appendChild(this.container);
 
-    // Floating action button
+    // Annotate FAB (upper button — enters annotation mode)
+    this.annotateFab = document.createElement('button');
+    this.annotateFab.className = 'aa-annotate-fab';
+    this.annotateFab.addEventListener('click', () => {
+      if (this.onEnterAnnotationMode) {
+        this.onEnterAnnotationMode();
+      }
+    });
+    this.shadowRoot.appendChild(this.annotateFab);
+
+    // Panel FAB (lower button — toggles panel / exits annotation mode)
     this.fab = document.createElement('button');
     this.fab.className = 'aa-panel-fab';
     this.fab.addEventListener('click', () => {
@@ -47,7 +59,7 @@ export class AnnotationPanel {
     });
     this.shadowRoot.appendChild(this.fab);
 
-    // Shortcut label next to FAB
+    // Shortcut label next to FAB stack
     this.label = document.createElement('div');
     this.label.className = 'aa-fab-label';
     this.label.textContent = 'Alt+L';
@@ -60,6 +72,7 @@ export class AnnotationPanel {
     this.visible = true;
     this.container.style.display = 'flex';
     this.fab.style.display = 'none';
+    this.annotateFab.style.display = 'none';
     this.label.style.display = 'none';
     this.render();
     this.onVisibilityChanged();
@@ -70,6 +83,7 @@ export class AnnotationPanel {
     this.editingId = null;
     this.container.style.display = 'none';
     this.fab.style.display = 'flex';
+    this.annotateFab.style.display = this.annotationModeActive ? 'none' : 'flex';
     this.label.style.display = 'block';
     this.onVisibilityChanged();
   }
@@ -136,7 +150,12 @@ export class AnnotationPanel {
   setAnnotationMode(active: boolean, onExitMode?: () => void): void {
     this.annotationModeActive = active;
     this.onExitAnnotationMode = onExitMode ?? null;
+    this.annotateFab.style.display = active ? 'none' : 'flex';
     this.renderFab();
+  }
+
+  setOnEnterAnnotationMode(callback: () => void): void {
+    this.onEnterAnnotationMode = callback;
   }
 
   setSide(side: SideValue): void {
@@ -172,6 +191,7 @@ export class AnnotationPanel {
     this.container.removeEventListener('keydown', this.onKeyDown);
     this.container.remove();
     this.fab.remove();
+    this.annotateFab.remove();
     this.label.remove();
   }
 
@@ -295,6 +315,13 @@ export class AnnotationPanel {
         </svg>`;
 
     this.fab.innerHTML = `${icon}${badge}`;
+
+    // Annotate button: crosshair icon
+    this.annotateFab.innerHTML = `
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+        <circle cx="8" cy="8" r="5"/><line x1="8" y1="1" x2="8" y2="4"/><line x1="8" y1="12" x2="8" y2="15"/><line x1="1" y1="8" x2="4" y2="8"/><line x1="12" y1="8" x2="15" y2="8"/>
+      </svg>
+    `;
 
     if (this.annotationModeActive) {
       this.fab.classList.add('aa-fab-active');

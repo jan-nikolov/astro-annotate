@@ -49,6 +49,12 @@ export class Overlay {
       () => this.renderPins(),
     );
 
+    // Wire up annotate button in FAB stack
+    this.panel.setOnEnterAnnotationMode(() => {
+      this.setActive(true);
+      window.dispatchEvent(new CustomEvent('aa:state-changed', { detail: { active: true } }));
+    });
+
     // Listen for toggle from Dev Toolbar
     window.addEventListener('aa:toggle', this.onToolbarToggle);
 

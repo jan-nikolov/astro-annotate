@@ -52,12 +52,13 @@ export class PinManager {
 
   updatePositions(): void {
     // Collect all positions first for overlap detection
-    const positions: { id: string; top: number; left: number }[] = [];
+    const positions: { id: string; top: number; left: number; side: 'left' | 'right' }[] = [];
 
     for (const [id, entry] of this.entries) {
       const rect = entry.el.getBoundingClientRect();
       const pinTop = Math.max(0, rect.top - 10);
       let pinLeft: number;
+      let side: 'left' | 'right';
 
       // Alternate placement: even indices right side, odd indices left side
       // If panel is open, all pins on opposite side
@@ -65,15 +66,19 @@ export class PinManager {
         // Panel open: all pins on opposite side
         if (this.panelSide === 'right') {
           pinLeft = Math.max(10, rect.left - 32);
+          side = 'left';
         } else {
           pinLeft = Math.max(10, rect.right - 24);
+          side = 'right';
         }
       } else {
         // No panel: alternate sides
         if (entry.index % 2 === 0) {
           pinLeft = Math.max(10, rect.right - 24);
+          side = 'right';
         } else {
           pinLeft = Math.max(10, rect.left - 32);
+          side = 'left';
         }
       }
 
@@ -88,7 +93,7 @@ export class PinManager {
         pinLeft = fabLeft - 32;
       }
 
-      positions.push({ id, top: pinTop, left: pinLeft });
+      positions.push({ id, top: pinTop, left: pinLeft, side });
     }
 
     // Group pins by side (left/right of viewport center) and cascade overlaps
@@ -105,13 +110,17 @@ export class PinManager {
       }
     }
 
-    // Apply positions
+    // Apply positions + direction classes
     for (const pos of positions) {
       const entry = this.entries.get(pos.id);
       if (!entry) continue;
       entry.pin.style.position = 'fixed';
       entry.pin.style.top = `${pos.top}px`;
       entry.pin.style.left = `${pos.left}px`;
+
+      // Point toward the annotated element
+      entry.pin.classList.toggle('aa-pin-point-left', pos.side === 'right');
+      entry.pin.classList.toggle('aa-pin-point-right', pos.side === 'left');
     }
   }
 

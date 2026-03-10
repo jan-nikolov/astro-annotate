@@ -42,40 +42,151 @@ export const OVERLAY_STYLES = `
     text-overflow: ellipsis;
   }
 
-  /* Annotation Form */
-  .aa-form-container {
+  /* Inline Comment Input */
+  @keyframes aa-pop-in {
+    from { opacity: 0; transform: scale(0.95) translateY(4px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  @keyframes aa-pop-in-above {
+    from { opacity: 0; transform: scale(0.95) translateY(-4px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+  }
+
+  .aa-inline-input {
     position: fixed;
     z-index: 2147483647;
+    width: 320px;
+    max-width: calc(100vw - 32px);
     background: #fff;
     border-radius: 12px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
     border: 1px solid rgba(0, 0, 0, 0.08);
-    width: 340px;
-    overflow: hidden;
-  }
-
-  .aa-form-header {
-    background: #1a1a2e;
-    color: #fff;
-    padding: 12px 16px;
+    padding: 12px;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    gap: 10px;
+    animation: aa-pop-in 0.15s ease-out;
   }
 
-  .aa-form-header-title {
-    font-size: 13px;
-    font-weight: 600;
+  .aa-inline-input.aa-inline-above {
+    animation-name: aa-pop-in-above;
   }
 
-  .aa-form-header-selector {
+  .aa-inline-arrow {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    transform: rotate(45deg);
+  }
+
+  .aa-inline-arrow-top {
+    top: -7px;
+    border-bottom: none;
+    border-right: none;
+  }
+
+  .aa-inline-arrow-bottom {
+    bottom: -7px;
+    border-top: none;
+    border-left: none;
+  }
+
+  .aa-inline-tag {
+    display: inline-block;
+    font-family: 'SF Mono', Monaco, Consolas, monospace;
     font-size: 11px;
-    opacity: 0.7;
-    font-family: 'SF Mono', Monaco, monospace;
-    max-width: 200px;
+    font-weight: 500;
+    background: #f0f0f2;
+    color: #666;
+    padding: 3px 8px;
+    border-radius: 10px;
+    max-width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .aa-inline-author {
+    width: 100%;
+    padding: 7px 10px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .aa-inline-author:focus {
+    border-color: #e94560;
+  }
+
+  .aa-inline-textarea {
+    width: 100%;
+    padding: 7px 10px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: inherit;
+    outline: none;
+    resize: none;
+    min-height: 36px;
+    max-height: 200px;
+    line-height: 1.5;
+    transition: border-color 0.15s;
+  }
+
+  .aa-inline-textarea:focus {
+    border-color: #e94560;
+  }
+
+  .aa-inline-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .aa-inline-hint {
+    font-size: 11px;
+    color: #999;
+  }
+
+  .aa-inline-submit {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #e94560;
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+    flex-shrink: 0;
+  }
+
+  .aa-inline-submit:hover {
+    background: #c73e54;
+  }
+
+  .aa-inline-submit:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+  }
+
+  .aa-inline-submit svg {
+    width: 16px;
+    height: 16px;
+  }
+
+  /* Keep these for pin-detail header reuse */
+  .aa-form-header-title {
+    font-size: 13px;
+    font-weight: 600;
   }
 
   .aa-form-close {
@@ -91,72 +202,6 @@ export const OVERLAY_STYLES = `
 
   .aa-form-close:hover {
     opacity: 1;
-  }
-
-  .aa-form-body {
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .aa-input, .aa-textarea {
-    width: 100%;
-    padding: 8px 12px;
-    border: 1px solid #e0e0e0;
-    border-radius: 6px;
-    font-size: 13px;
-    font-family: inherit;
-    outline: none;
-    transition: border-color 0.15s;
-  }
-
-  .aa-input:focus, .aa-textarea:focus {
-    border-color: #e94560;
-  }
-
-  .aa-textarea {
-    resize: vertical;
-    min-height: 80px;
-  }
-
-  .aa-form-actions {
-    display: flex;
-    gap: 8px;
-    justify-content: flex-end;
-  }
-
-  .aa-btn {
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-    border: none;
-    transition: all 0.15s;
-  }
-
-  .aa-btn-primary {
-    background: #e94560;
-    color: #fff;
-  }
-
-  .aa-btn-primary:hover {
-    background: #c73e54;
-  }
-
-  .aa-btn-primary:disabled {
-    background: #ccc;
-    cursor: not-allowed;
-  }
-
-  .aa-btn-secondary {
-    background: #f0f0f0;
-    color: #333;
-  }
-
-  .aa-btn-secondary:hover {
-    background: #e0e0e0;
   }
 
   /* Pins */
@@ -202,6 +247,7 @@ export const OVERLAY_STYLES = `
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
     border: 1px solid rgba(0, 0, 0, 0.08);
     width: 320px;
+    max-width: calc(100vw - 32px);
     overflow: hidden;
   }
 
@@ -296,6 +342,7 @@ export const OVERLAY_STYLES = `
     top: 16px;
     right: 16px;
     width: 360px;
+    max-width: calc(100vw - 32px);
     height: calc(100vh - 32px);
     background: #fff;
     box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
@@ -308,12 +355,31 @@ export const OVERLAY_STYLES = `
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-size: 14px;
     color: #1a1a2e;
+    transition: width 0.2s ease;
   }
 
   .aa-panel.aa-panel-left {
     right: auto;
     left: 16px;
     box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+  }
+
+  .aa-panel.aa-panel-compact {
+    width: 280px;
+    max-width: calc(100vw - 32px);
+  }
+
+  @media (max-width: 400px) {
+    .aa-panel {
+      width: calc(100vw - 16px);
+      right: 8px;
+      left: 8px;
+      border-radius: 8px;
+    }
+
+    .aa-panel.aa-panel-left {
+      right: 8px;
+    }
   }
 
   .aa-panel-header {
@@ -568,25 +634,40 @@ export const OVERLAY_STYLES = `
 
   /* Dark mode */
   @media (prefers-color-scheme: dark) {
-    .aa-form-container, .aa-pin-detail {
+    .aa-inline-input {
       background: #2d2d3f;
       color: #e0e0e0;
       border-color: rgba(255, 255, 255, 0.1);
     }
 
-    .aa-input, .aa-textarea {
+    .aa-inline-arrow {
+      background: #2d2d3f;
+      border-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .aa-inline-tag {
+      background: #1a1a2e;
+      color: #aaa;
+    }
+
+    .aa-inline-author, .aa-inline-textarea {
       background: #1a1a2e;
       border-color: #404060;
       color: #e0e0e0;
     }
 
-    .aa-btn-secondary {
-      background: #404060;
-      color: #e0e0e0;
+    .aa-inline-author:focus, .aa-inline-textarea:focus {
+      border-color: #e94560;
     }
 
-    .aa-btn-secondary:hover {
-      background: #505070;
+    .aa-inline-hint {
+      color: #777;
+    }
+
+    .aa-pin-detail {
+      background: #2d2d3f;
+      color: #e0e0e0;
+      border-color: rgba(255, 255, 255, 0.1);
     }
 
     .aa-pin-detail-selector {

@@ -308,9 +308,9 @@ export class PinManager {
     }
     if (top < MARGIN) {
       top = MARGIN;
-      // Constrain height to available viewport space
-      this.detailPopup.style.maxHeight = `${vh - MARGIN * 2}px`;
     }
+    // Always constrain height so thread list remains scrollable
+    this.detailPopup.style.maxHeight = `${vh - top - MARGIN}px`;
 
     let left = rect.left;
     if (left + detailWidth > vw - MARGIN) {

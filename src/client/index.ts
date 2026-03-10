@@ -4,7 +4,7 @@ import { Overlay } from './overlay.js';
 let overlay: Overlay | null = null;
 const PANEL_STATE_KEY = 'aa-panel-state';
 
-function savePanelState(state: { visible: boolean; filter: string; side: string }): void {
+function savePanelState(state: Record<string, unknown>): void {
   sessionStorage.setItem(PANEL_STATE_KEY, JSON.stringify(state));
 }
 

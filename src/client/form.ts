@@ -3,10 +3,20 @@ import { API_ANNOTATIONS } from '../constants.js';
 import { generateSelector, getElementText } from './selector.js';
 import { escapeHtml } from './utils.js';
 
+// Layout constants
+const INPUT_WIDTH = 320;
+const INPUT_HEIGHT_DEV = 140;
+const INPUT_HEIGHT_CLIENT = 180;
+const VIEWPORT_MARGIN = 16;
+const ELEMENT_GAP = 12;
+const TEXTAREA_MAX_HEIGHT = 200;
+const FOCUS_DELAY = 50;
+
 export class AnnotationForm {
   private container: HTMLElement;
   private onSubmitted: () => void;
   private onClosed: () => void;
+  private abortController: AbortController | null = null;
 
   constructor(
     private shadowRoot: ShadowRoot,
@@ -15,7 +25,7 @@ export class AnnotationForm {
     private devMode: boolean,
   ) {
     this.container = document.createElement('div');
-    this.container.className = 'aa-form-container';
+    this.container.className = 'aa-inline-input';
     this.container.style.display = 'none';
     this.shadowRoot.appendChild(this.container);
     this.onSubmitted = onSubmitted;
@@ -23,66 +33,99 @@ export class AnnotationForm {
   }
 
   show(target: Element): void {
+    // Abort previous listeners to prevent accumulation across show/hide cycles
+    this.abortController?.abort();
+    this.abortController = new AbortController();
+    const { signal } = this.abortController;
+
     const selector = generateSelector(target);
     const elementTag = target.tagName.toLowerCase();
     const elementText = getElementText(target);
     const rect = target.getBoundingClientRect();
 
-    // Position: below and to the right of the element, or above if not enough space
-    let top = rect.bottom + 8;
-    let left = rect.left;
+    // Determine placement: below or above element
+    const inputHeight = this.devMode ? INPUT_HEIGHT_DEV : INPUT_HEIGHT_CLIENT;
+    const spaceBelow = window.innerHeight - rect.bottom - ELEMENT_GAP;
+    const placeAbove = spaceBelow < inputHeight && rect.top > inputHeight + ELEMENT_GAP;
 
-    if (top + 300 > window.innerHeight) {
-      top = rect.top - 308;
+    // Horizontal position: center on element, clamped to viewport
+    const inputWidth = Math.min(INPUT_WIDTH, window.innerWidth - VIEWPORT_MARGIN * 2);
+    const elementCenter = rect.left + rect.width / 2;
+    let left = elementCenter - inputWidth / 2;
+    left = Math.max(VIEWPORT_MARGIN, Math.min(left, window.innerWidth - inputWidth - VIEWPORT_MARGIN));
+
+    // Vertical position
+    let top: number;
+    if (placeAbove) {
+      top = rect.top - inputHeight - ELEMENT_GAP;
+    } else {
+      top = rect.bottom + ELEMENT_GAP;
     }
-    if (left + 340 > window.innerWidth) {
-      left = window.innerWidth - 350;
-    }
-    if (top < 10) top = 10;
-    if (left < 10) left = 10;
+    top = Math.max(VIEWPORT_MARGIN, Math.min(top, window.innerHeight - inputHeight - VIEWPORT_MARGIN));
 
     this.container.style.top = `${top}px`;
     this.container.style.left = `${left}px`;
-    this.container.style.display = 'block';
+    this.container.style.width = `${inputWidth}px`;
+    this.container.style.display = 'flex';
+    this.container.className = `aa-inline-input${placeAbove ? ' aa-inline-above' : ''}`;
+
+    // Arrow position (points to element center)
+    const arrowLeft = Math.max(VIEWPORT_MARGIN, Math.min(elementCenter - left - 6, inputWidth - 28));
+    const arrowClass = placeAbove ? 'aa-inline-arrow aa-inline-arrow-bottom' : 'aa-inline-arrow aa-inline-arrow-top';
+
+    // Build tag label (tag only, selector shown as tooltip)
+    const tagLabel = `&lt;${escapeHtml(elementTag)}&gt;`;
 
     this.container.innerHTML = `
-      <div class="aa-form-header">
-        <div>
-          <div class="aa-form-header-title">New Annotation</div>
-          <div class="aa-form-header-selector">${escapeHtml(selector)}</div>
-        </div>
-        <button class="aa-form-close" data-action="close">&times;</button>
-      </div>
-      <div class="aa-form-body">
-        ${this.devMode ? '' : '<input class="aa-input" type="text" placeholder="Your name" data-field="author" value="" />'}
-        <textarea class="aa-textarea" placeholder="What should be changed?" data-field="text"></textarea>
-        <div class="aa-form-actions">
-          <button class="aa-btn aa-btn-secondary" data-action="close">Cancel</button>
-          <button class="aa-btn aa-btn-primary" data-action="submit">Submit</button>
-        </div>
+      <div class="${arrowClass}" style="left: ${arrowLeft}px"></div>
+      <div class="aa-inline-tag" title="${escapeHtml(selector)}">${tagLabel}</div>
+      ${this.devMode ? '' : '<input class="aa-inline-author" type="text" placeholder="Your name" data-field="author" />'}
+      <textarea class="aa-inline-textarea" placeholder="What should change?" data-field="text" rows="1"></textarea>
+      <div class="aa-inline-footer">
+        <span class="aa-inline-hint">Ctrl+Enter</span>
+        <button class="aa-inline-submit" data-action="submit" title="Submit">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="8" x2="13" y2="8"/><polyline points="9,4 13,8 9,12"/>
+          </svg>
+        </button>
       </div>
     `;
 
-    // Focus textarea
+    // Auto-resize textarea + reposition if overflowing viewport
     const textarea = this.container.querySelector('[data-field="text"]') as HTMLTextAreaElement;
-    setTimeout(() => textarea?.focus(), 50);
+    textarea.addEventListener('input', () => {
+      textarea.style.height = 'auto';
+      textarea.style.height = Math.min(textarea.scrollHeight, TEXTAREA_MAX_HEIGHT) + 'px';
+      const containerRect = this.container.getBoundingClientRect();
+      if (containerRect.bottom > window.innerHeight - VIEWPORT_MARGIN) {
+        const overflow = containerRect.bottom - window.innerHeight + VIEWPORT_MARGIN;
+        this.container.style.top = (parseFloat(this.container.style.top) - overflow) + 'px';
+      }
+    }, { signal });
 
-    // Event listeners
-    this.container.querySelectorAll('[data-action="close"]').forEach((btn) => {
-      btn.addEventListener('click', () => this.hide());
-    });
+    // Focus textarea (or author field if present)
+    const firstInput = this.devMode
+      ? textarea
+      : this.container.querySelector('[data-field="author"]') as HTMLInputElement;
+    setTimeout(() => firstInput?.focus(), FOCUS_DELAY);
 
+    // Submit button
     const submitBtn = this.container.querySelector('[data-action="submit"]') as HTMLButtonElement;
     submitBtn.addEventListener('click', () => {
       this.submit(selector, elementTag, elementText);
-    });
+    }, { signal });
 
-    // Submit on Ctrl+Enter
-    textarea.addEventListener('keydown', (e) => {
+    // Keyboard: Ctrl+Enter to submit, Escape to close
+    this.container.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
         this.submit(selector, elementTag, elementText);
       }
-    });
+      if (e.key === 'Escape') {
+        e.stopPropagation();
+        this.hide();
+      }
+    }, { signal });
   }
 
   private async submit(selector: string, elementTag: string, elementText: string): Promise<void> {
@@ -95,7 +138,6 @@ export class AnnotationForm {
 
     const submitBtn = this.container.querySelector('[data-action="submit"]') as HTMLButtonElement;
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Saving...';
 
     const payload: CreateAnnotationPayload = {
       page: window.location.pathname,
@@ -121,13 +163,14 @@ export class AnnotationForm {
       this.onSubmitted();
     } catch (err) {
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Submit';
       console.error('[astro-annotate] Failed to save annotation:', err);
     }
   }
 
   hide(): void {
     if (this.container.style.display === 'none') return;
+    this.abortController?.abort();
+    this.abortController = null;
     this.container.style.display = 'none';
     this.container.innerHTML = '';
     this.onClosed();
@@ -137,8 +180,8 @@ export class AnnotationForm {
     return this.container.style.display !== 'none';
   }
 
-
   destroy(): void {
+    this.abortController?.abort();
     this.container.remove();
   }
 }

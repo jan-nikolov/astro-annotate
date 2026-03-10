@@ -1,3 +1,4 @@
+import { resolve } from 'node:path';
 import type { Plugin } from 'vite';
 import type { ResolvedConfig } from '../types.js';
 import { VIRTUAL_MODULE_ID, RESOLVED_VIRTUAL_MODULE_ID } from '../constants.js';
@@ -14,6 +15,10 @@ export function astroAnnotateVitePlugin(config: ResolvedConfig): Plugin {
       if (id === RESOLVED_VIRTUAL_MODULE_ID) {
         return `export default ${JSON.stringify(config)};`;
       }
+    },
+    configureServer(server) {
+      const fullPath = resolve(server.config.root, config.annotationsPath);
+      server.watcher.unwatch(fullPath);
     },
   };
 }

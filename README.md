@@ -7,6 +7,8 @@ Visual annotation overlay for Astro staging sites. Clients and stakeholders anno
 ## Features
 
 - **Element-based annotations** &mdash; hover to highlight, click to annotate any HTML element
+- **Figma-style pins** &mdash; small teardrops that point toward annotated elements with directional tilt
+- **Draggable panel** &mdash; freely movable annotations panel with resize handle and snap-to-side docking
 - **CSS selector tracking** &mdash; annotations reference elements by robust CSS selectors (IDs, data-testid, tag+class)
 - **JSON storage** &mdash; annotations saved as `annotations.json`, directly readable by developers and LLMs (Claude Code, Cursor, etc.)
 - **Shadow DOM isolation** &mdash; overlay UI is fully isolated from your site's styles
@@ -38,9 +40,12 @@ export default defineConfig({
 ## Usage
 
 1. Start `astro dev`
-2. Click the annotation button (bottom-right corner)
+2. Click the crosshair button (top of FAB stack, bottom-right) to enter annotation mode
 3. Hover over elements to highlight them, click to annotate
-4. Annotations are saved to `annotations.json` in your project root
+4. Click the speech bubble button (bottom of FAB stack) to open the annotations panel
+5. Drag the panel header to freely reposition &mdash; drag to viewport edges to snap/dock
+6. Drag the bottom-right corner of a floating panel to resize
+7. Annotations are saved to `annotations.json` in your project root
 
 ### Reading annotations
 

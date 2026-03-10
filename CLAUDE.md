@@ -42,7 +42,7 @@ See `docs/research-feb-2026.md` for details on market, competition, Astro+Cloudf
 
 ## Phases
 
-1. **Phase 1 (MVP):** Done. Local dev mode. Overlay + JSON storage + Astro Dev Toolbar integration + Annotations Panel. Keyboard shortcuts (Alt+C, Alt+L, Escape). Works in `astro dev`.
+1. **Phase 1 (MVP):** Done. Local dev mode. Overlay + JSON storage + Astro Dev Toolbar integration + Annotations Panel + Inline Comment Input. Keyboard shortcuts (Alt+C, Alt+L, Escape). Smart panel behavior (compact mode in annotation mode, auto-side-switch). Smooth pin scrolling with rAF + alternate placement. Mobile responsive. Works in `astro dev`.
 2. **Phase 2:** Deployed mode on Cloudflare Pages + password auth.
 3. **Phase 3:** Polish (screenshots, CLI export, mobile UX, docs, launch).
 
@@ -72,11 +72,11 @@ See `docs/research-feb-2026.md` for details on market, competition, Astro+Cloudf
 - `src/client/highlighter.ts` — Element hover highlight during annotation mode
 - `src/client/panel.ts` — Annotations sidebar panel (filter, inline edit, bulk resolve, docking)
 - `src/client/pin.ts` — Pin markers + detail popup for existing annotations
-- `src/client/form.ts` — Annotation form (devMode-aware)
+- `src/client/form.ts` — Inline comment input (floating card with arrow, auto-resize textarea, devMode-aware)
 - `src/client/utils.ts` — Shared utilities (escapeHtml)
 - `src/client/index.ts` — Client entry point (init, sessionStorage persistence, View Transition support)
 - `src/client/selector.ts` — CSS selector generation
-- `src/integration/vite-plugin.ts` — Virtual module (`virtual:astro-annotate/config`)
+- `src/integration/vite-plugin.ts` — Virtual module (`virtual:astro-annotate/config`) + Vite watcher exclusion for annotations.json
 - `src/server/dev-middleware.ts` — Vite middleware (REST API)
 - `src/storage/local.ts` — JSON file storage
 - `playground/` — Test Astro site with 2 pages
@@ -103,3 +103,5 @@ See `docs/research-feb-2026.md` for details on market, competition, Astro+Cloudf
 - View Transitions: On `astro:page-load`, must call `overlay.destroy()` (not just remove DOM), otherwise document-level listeners leak.
 - Module-level variables: Do NOT survive full page reloads (only View Transitions). Use `sessionStorage` for state that must persist across navigations.
 - Playground View Transitions: Both playground pages need `<ClientRouter />` (Astro 5+) for SPA navigation, otherwise every link is a full reload.
+- Vite HMR + annotations.json: Writing annotations.json triggers Vite's file watcher → full page reload. Fixed by unwatching the file in `configureServer()` hook.
+- Pin rendering on scroll: Never destroy/recreate Pin DOM elements on scroll. Use `updatePositions()` to update only `top`/`left` styles. Use rAF-throttled scroll handler for smooth performance.

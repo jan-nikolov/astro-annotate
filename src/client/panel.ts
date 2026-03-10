@@ -115,7 +115,6 @@ export class AnnotationPanel {
   show(): void {
     this.visible = true;
     this.container.style.display = 'flex';
-    this.label.textContent = 'Esc';
     this.fab.classList.add('aa-fab-panel-open');
     this.renderFab();
     this.render();
@@ -128,7 +127,6 @@ export class AnnotationPanel {
     this.editingId = null;
     this.container.style.display = 'none';
     this.hideSnapZones();
-    this.label.textContent = 'Alt+L';
     this.fab.classList.remove('aa-fab-panel-open');
     this.renderFab();
     this.onVisibilityChanged();

@@ -119,6 +119,7 @@ export class AnnotationPanel {
     this.renderFab();
     this.render();
     this.applyMode();
+    this.updateFabSide();
     this.onVisibilityChanged();
   }
 
@@ -129,6 +130,7 @@ export class AnnotationPanel {
     this.hideSnapZones();
     this.fab.classList.remove('aa-fab-panel-open');
     this.renderFab();
+    this.updateFabSide();
     this.onVisibilityChanged();
   }
 
@@ -381,6 +383,7 @@ export class AnnotationPanel {
       this.clearInlineStyles();
       this.resizeHandle.style.display = 'none';
     }
+    this.updateFabSide();
   }
 
   private clearInlineStyles(): void {
@@ -417,6 +420,7 @@ export class AnnotationPanel {
     this.container.addEventListener('transitionend', cleanup, { once: true });
     setTimeout(cleanup, 350);
 
+    this.updateFabSide();
     this.onVisibilityChanged();
   }
 
@@ -677,6 +681,14 @@ export class AnnotationPanel {
     setTimeout(() => {
       flash.remove();
     }, 1300);
+  }
+
+  private updateFabSide(): void {
+    const moveLeft = this.visible && this.mode === 'docked' && this.side === 'right';
+    this.fab.classList.toggle('aa-fab-left', moveLeft);
+    this.annotateFab.classList.toggle('aa-fab-left', moveLeft);
+    this.annotateLabel.classList.toggle('aa-fab-label-left', moveLeft);
+    this.label.classList.toggle('aa-fab-label-left', moveLeft);
   }
 
   // --- Helpers ---

@@ -844,6 +844,10 @@ export const OVERLAY_STYLES = `
     bottom: 76px;
   }
 
+  .aa-panel-fab.aa-fab-left { right: auto; left: 16px; }
+  .aa-annotate-fab.aa-fab-left { right: auto; left: 16px; }
+  .aa-fab-label.aa-fab-label-left { right: auto; left: 54px; }
+
   /* Dark mode */
   @media (prefers-color-scheme: dark) {
     .aa-inline-input {

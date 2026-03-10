@@ -138,15 +138,17 @@ export class PinManager {
         }
       }
 
-      // FAB collision check (FAB: bottom: 72px, right: 16px, 32×32)
-      const fabLeft = window.innerWidth - 48;
+      // FAB collision check (FAB: bottom: 72px, 32×32)
+      // FABs move to left side when panel is docked on the right
+      const fabOnLeft = this.panelSide === 'right';
+      const fabXStart = fabOnLeft ? 16 : window.innerWidth - 48;
+      const fabXEnd = fabOnLeft ? 48 : window.innerWidth - 16;
       const fabTop = window.innerHeight - 104;
-      const fabRight = window.innerWidth - 16;
       const fabBottom = window.innerHeight - 72;
 
       if (pinTop + PIN_SIZE > fabTop && pinTop < fabBottom &&
-          pinLeft + PIN_SIZE > fabLeft && pinLeft < fabRight) {
-        pinLeft = fabLeft - PIN_SIZE - 8;
+          pinLeft + PIN_SIZE > fabXStart && pinLeft < fabXEnd) {
+        pinLeft = fabOnLeft ? fabXEnd + 8 : fabXStart - PIN_SIZE - 8;
       }
 
       positions.push({ selector, top: pinTop, left: pinLeft });

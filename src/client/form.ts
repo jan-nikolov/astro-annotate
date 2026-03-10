@@ -3,10 +3,20 @@ import { API_ANNOTATIONS } from '../constants.js';
 import { generateSelector, getElementText } from './selector.js';
 import { escapeHtml } from './utils.js';
 
+// Layout constants
+const INPUT_WIDTH = 320;
+const INPUT_HEIGHT_DEV = 140;
+const INPUT_HEIGHT_CLIENT = 180;
+const VIEWPORT_MARGIN = 16;
+const ELEMENT_GAP = 12;
+const TEXTAREA_MAX_HEIGHT = 200;
+const FOCUS_DELAY = 50;
+
 export class AnnotationForm {
   private container: HTMLElement;
   private onSubmitted: () => void;
   private onClosed: () => void;
+  private abortController: AbortController | null = null;
 
   constructor(
     private shadowRoot: ShadowRoot,
@@ -23,31 +33,35 @@ export class AnnotationForm {
   }
 
   show(target: Element): void {
+    // Abort previous listeners to prevent accumulation across show/hide cycles
+    this.abortController?.abort();
+    this.abortController = new AbortController();
+    const { signal } = this.abortController;
+
     const selector = generateSelector(target);
     const elementTag = target.tagName.toLowerCase();
     const elementText = getElementText(target);
     const rect = target.getBoundingClientRect();
 
     // Determine placement: below or above element
-    const inputHeight = this.devMode ? 140 : 180; // estimated height
-    const gap = 12;
-    const spaceBelow = window.innerHeight - rect.bottom - gap;
-    const placeAbove = spaceBelow < inputHeight && rect.top > inputHeight + gap;
+    const inputHeight = this.devMode ? INPUT_HEIGHT_DEV : INPUT_HEIGHT_CLIENT;
+    const spaceBelow = window.innerHeight - rect.bottom - ELEMENT_GAP;
+    const placeAbove = spaceBelow < inputHeight && rect.top > inputHeight + ELEMENT_GAP;
 
     // Horizontal position: center on element, clamped to viewport
-    const inputWidth = Math.min(320, window.innerWidth - 32);
+    const inputWidth = Math.min(INPUT_WIDTH, window.innerWidth - VIEWPORT_MARGIN * 2);
     const elementCenter = rect.left + rect.width / 2;
     let left = elementCenter - inputWidth / 2;
-    left = Math.max(16, Math.min(left, window.innerWidth - inputWidth - 16));
+    left = Math.max(VIEWPORT_MARGIN, Math.min(left, window.innerWidth - inputWidth - VIEWPORT_MARGIN));
 
     // Vertical position
     let top: number;
     if (placeAbove) {
-      top = rect.top - inputHeight - gap;
+      top = rect.top - inputHeight - ELEMENT_GAP;
     } else {
-      top = rect.bottom + gap;
+      top = rect.bottom + ELEMENT_GAP;
     }
-    top = Math.max(16, Math.min(top, window.innerHeight - inputHeight - 16));
+    top = Math.max(VIEWPORT_MARGIN, Math.min(top, window.innerHeight - inputHeight - VIEWPORT_MARGIN));
 
     this.container.style.top = `${top}px`;
     this.container.style.left = `${left}px`;
@@ -56,7 +70,7 @@ export class AnnotationForm {
     this.container.className = `aa-inline-input${placeAbove ? ' aa-inline-above' : ''}`;
 
     // Arrow position (points to element center)
-    const arrowLeft = Math.max(16, Math.min(elementCenter - left - 6, inputWidth - 28));
+    const arrowLeft = Math.max(VIEWPORT_MARGIN, Math.min(elementCenter - left - 6, inputWidth - 28));
     const arrowClass = placeAbove ? 'aa-inline-arrow aa-inline-arrow-bottom' : 'aa-inline-arrow aa-inline-arrow-top';
 
     // Build tag label (tag only, selector shown as tooltip)
@@ -81,25 +95,25 @@ export class AnnotationForm {
     const textarea = this.container.querySelector('[data-field="text"]') as HTMLTextAreaElement;
     textarea.addEventListener('input', () => {
       textarea.style.height = 'auto';
-      textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+      textarea.style.height = Math.min(textarea.scrollHeight, TEXTAREA_MAX_HEIGHT) + 'px';
       const containerRect = this.container.getBoundingClientRect();
-      if (containerRect.bottom > window.innerHeight - 16) {
-        const overflow = containerRect.bottom - window.innerHeight + 16;
+      if (containerRect.bottom > window.innerHeight - VIEWPORT_MARGIN) {
+        const overflow = containerRect.bottom - window.innerHeight + VIEWPORT_MARGIN;
         this.container.style.top = (parseFloat(this.container.style.top) - overflow) + 'px';
       }
-    });
+    }, { signal });
 
     // Focus textarea (or author field if present)
     const firstInput = this.devMode
       ? textarea
       : this.container.querySelector('[data-field="author"]') as HTMLInputElement;
-    setTimeout(() => firstInput?.focus(), 50);
+    setTimeout(() => firstInput?.focus(), FOCUS_DELAY);
 
     // Submit button
     const submitBtn = this.container.querySelector('[data-action="submit"]') as HTMLButtonElement;
     submitBtn.addEventListener('click', () => {
       this.submit(selector, elementTag, elementText);
-    });
+    }, { signal });
 
     // Keyboard: Ctrl+Enter to submit, Escape to close
     this.container.addEventListener('keydown', (e) => {
@@ -111,7 +125,7 @@ export class AnnotationForm {
         e.stopPropagation();
         this.hide();
       }
-    });
+    }, { signal });
   }
 
   private async submit(selector: string, elementTag: string, elementText: string): Promise<void> {
@@ -155,6 +169,8 @@ export class AnnotationForm {
 
   hide(): void {
     if (this.container.style.display === 'none') return;
+    this.abortController?.abort();
+    this.abortController = null;
     this.container.style.display = 'none';
     this.container.innerHTML = '';
     this.onClosed();
@@ -165,6 +181,7 @@ export class AnnotationForm {
   }
 
   destroy(): void {
+    this.abortController?.abort();
     this.container.remove();
   }
 }

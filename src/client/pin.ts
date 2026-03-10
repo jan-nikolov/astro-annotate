@@ -2,6 +2,12 @@ import type { Annotation } from '../types.js';
 import { API_ANNOTATIONS } from '../constants.js';
 import { escapeHtml, formatTimeAgo } from './utils.js';
 
+// FAB layout constants (must match CSS values in styles.ts)
+const FAB_SIZE = 32;
+const FAB_SIDE_OFFSET = 16;
+const FAB_LOWER_BOTTOM = 72;
+const FAB_UPPER_BOTTOM = 112;
+
 interface ClusterEntry {
   wrapper: HTMLElement;
   pin: HTMLElement;
@@ -156,13 +162,13 @@ export class PinManager {
         }
       }
 
-      // FAB collision check (FAB: bottom: 72px, 32×32)
+      // FAB collision check — covers both FABs (upper + lower, same X column)
       // FABs move to left side when panel is docked on the right
       const fabOnLeft = this.panelSide === 'right';
-      const fabXStart = fabOnLeft ? 16 : window.innerWidth - 48;
-      const fabXEnd = fabOnLeft ? 48 : window.innerWidth - 16;
-      const fabTop = window.innerHeight - 104;
-      const fabBottom = window.innerHeight - 72;
+      const fabXStart = fabOnLeft ? FAB_SIDE_OFFSET : window.innerWidth - FAB_SIDE_OFFSET - FAB_SIZE;
+      const fabXEnd = fabXStart + FAB_SIZE;
+      const fabTop = window.innerHeight - FAB_UPPER_BOTTOM - FAB_SIZE;
+      const fabBottom = window.innerHeight - FAB_LOWER_BOTTOM;
 
       if (pinTop + PIN_SIZE > fabTop && pinTop < fabBottom &&
           pinLeft + PIN_SIZE > fabXStart && pinLeft < fabXEnd) {

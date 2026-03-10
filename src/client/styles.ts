@@ -22,7 +22,7 @@ export const OVERLAY_STYLES = `
     border: 2px solid #e94560;
     background: rgba(233, 69, 96, 0.08);
     border-radius: 3px;
-    z-index: 2147483646;
+    z-index: 1;
     transition: all 0.1s ease;
   }
 
@@ -55,7 +55,7 @@ export const OVERLAY_STYLES = `
 
   .aa-inline-input {
     position: fixed;
-    z-index: 2147483647;
+    z-index: 200;
     width: 320px;
     max-width: calc(100vw - 32px);
     background: #fff;
@@ -209,7 +209,7 @@ export const OVERLAY_STYLES = `
     position: fixed;
     width: 20px;
     height: 20px;
-    z-index: 2147483645;
+    z-index: 10;
     cursor: pointer;
   }
 
@@ -267,7 +267,7 @@ export const OVERLAY_STYLES = `
   /* Pin Detail Popup */
   .aa-pin-detail {
     position: fixed;
-    z-index: 2147483647;
+    z-index: 200;
     background: #fff;
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
@@ -313,18 +313,6 @@ export const OVERLAY_STYLES = `
     display: flex;
     flex-direction: column;
     gap: 4px;
-  }
-
-  .aa-pin-detail-selector {
-    font-family: 'SF Mono', Monaco, monospace;
-    font-size: 11px;
-    color: #666;
-    background: #f5f5f5;
-    padding: 4px 8px;
-    border-radius: 4px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   .aa-pin-detail-actions {
@@ -442,7 +430,7 @@ export const OVERLAY_STYLES = `
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    z-index: 2147483647;
+    z-index: 100;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-size: 14px;
     color: #1a1a2e;
@@ -510,7 +498,7 @@ export const OVERLAY_STYLES = `
     height: 100vh;
     border: 2px dashed rgba(233, 69, 96, 0.3);
     background: rgba(233, 69, 96, 0.05);
-    z-index: 2147483646;
+    z-index: 99;
     opacity: 0;
     transition: opacity 0.15s;
     pointer-events: none;
@@ -742,10 +730,10 @@ export const OVERLAY_STYLES = `
     font-size: 13px;
   }
 
-  /* Floating Action Button */
-  .aa-panel-fab {
+  /* Floating Action Buttons — shared base */
+  .aa-panel-fab,
+  .aa-annotate-fab {
     position: fixed;
-    bottom: 72px;
     right: 16px;
     width: 32px;
     height: 32px;
@@ -758,20 +746,19 @@ export const OVERLAY_STYLES = `
     align-items: center;
     justify-content: center;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    z-index: 2147483647;
+    z-index: 100;
     transition: background 0.15s;
   }
 
-  .aa-panel-fab:hover {
-    background: #2a2a40;
-  }
+  .aa-panel-fab { bottom: 72px; }
+  .aa-annotate-fab { bottom: 112px; }
 
-  .aa-panel-fab.aa-fab-active {
-    background: #e94560;
-    animation: aa-fab-pulse 2s infinite;
-  }
+  .aa-panel-fab:hover { background: #2a2a40; }
+  .aa-annotate-fab:hover { background: #e94560; }
 
-  .aa-panel-fab.aa-fab-panel-open {
+  .aa-panel-fab.aa-fab-active,
+  .aa-panel-fab.aa-fab-panel-open,
+  .aa-annotate-fab.aa-fab-active {
     background: #e94560;
     animation: aa-fab-pulse 2s infinite;
   }
@@ -798,40 +785,11 @@ export const OVERLAY_STYLES = `
     line-height: 1;
   }
 
-  /* Annotate FAB (upper button) */
-  .aa-annotate-fab {
-    position: fixed;
-    bottom: 112px;
-    right: 16px;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: #1a1a2e;
-    color: #fff;
-    cursor: pointer;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    z-index: 2147483647;
-    transition: background 0.15s;
-  }
-
-  .aa-annotate-fab:hover {
-    background: #e94560;
-  }
-
-  .aa-annotate-fab.aa-fab-active {
-    background: #e94560;
-    animation: aa-fab-pulse 2s infinite;
-  }
-
   /* FAB Shortcut Labels */
   .aa-fab-label {
     position: fixed;
     right: 54px;
-    z-index: 2147483647;
+    z-index: 100;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-size: 10px;
     color: #999;
@@ -855,7 +813,7 @@ export const OVERLAY_STYLES = `
     position: fixed;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 2147483645;
+    z-index: 10;
     background: #1a1a2e;
     color: #fff;
     font-size: 11px;
@@ -911,11 +869,6 @@ export const OVERLAY_STYLES = `
       background: #2d2d3f;
       color: #e0e0e0;
       border-color: rgba(255, 255, 255, 0.1);
-    }
-
-    .aa-pin-detail-selector {
-      background: #1a1a2e;
-      color: #aaa;
     }
 
     .aa-status-btn {
@@ -1008,19 +961,16 @@ export const OVERLAY_STYLES = `
       color: #888;
     }
 
-    .aa-panel-fab {
+    .aa-panel-fab,
+    .aa-annotate-fab {
       background: #2d2d3f;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
     }
 
-    .aa-panel-fab:hover {
-      background: #404060;
-    }
+    .aa-panel-fab:hover { background: #404060; }
+    .aa-annotate-fab:hover { background: #e94560; }
 
-    .aa-panel-fab.aa-fab-active {
-      background: #e94560;
-    }
-
+    .aa-panel-fab.aa-fab-active,
     .aa-panel-fab.aa-fab-panel-open {
       background: #e94560;
     }
@@ -1040,15 +990,6 @@ export const OVERLAY_STYLES = `
 
     .aa-thread-time {
       color: #888;
-    }
-
-    .aa-annotate-fab {
-      background: #2d2d3f;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-    }
-
-    .aa-annotate-fab:hover {
-      background: #e94560;
     }
 
     .aa-fab-label {

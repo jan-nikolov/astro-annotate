@@ -7,6 +7,8 @@ type FilterValue = 'all' | 'open' | 'resolved';
 type SideValue = 'right' | 'left';
 type PanelMode = 'docked' | 'floating';
 
+const SNAP_THRESHOLD = 60;
+
 interface FloatingState {
   x: number;
   y: number;
@@ -440,7 +442,6 @@ export class AnnotationPanel {
   }
 
   private updateSnapZoneHighlight(x: number): void {
-    const SNAP_THRESHOLD = 60;
     const rect = this.container.getBoundingClientRect();
     this.snapZoneLeft.classList.toggle('aa-snap-active', x < SNAP_THRESHOLD);
     this.snapZoneRight.classList.toggle('aa-snap-active', rect.right > window.innerWidth - SNAP_THRESHOLD);
@@ -483,7 +484,6 @@ export class AnnotationPanel {
           this.container.classList.remove('aa-panel-no-transition');
           this.hideSnapZones();
 
-          const SNAP_THRESHOLD = 60;
           const rect = this.container.getBoundingClientRect();
 
           if (x < SNAP_THRESHOLD) {
@@ -671,7 +671,7 @@ export class AnnotationPanel {
       background: 'rgba(233, 69, 96, 0.12)',
       borderRadius: '3px',
       pointerEvents: 'none',
-      zIndex: '2147483646',
+      zIndex: '1',
       transition: 'opacity 0.6s ease',
     });
     this.shadowRoot.appendChild(flash);

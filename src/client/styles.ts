@@ -844,6 +844,27 @@ export const OVERLAY_STYLES = `
     bottom: 76px;
   }
 
+  /* Off-viewport pin indicators */
+  .aa-pin-indicator {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2147483645;
+    background: #1a1a2e;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 12px;
+    pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .aa-pin-indicator-above { top: 8px; }
+  .aa-pin-indicator-below { bottom: 8px; }
+
   .aa-panel-fab.aa-fab-left { right: auto; left: 16px; }
   .aa-annotate-fab.aa-fab-left { right: auto; left: 16px; }
   .aa-fab-label.aa-fab-label-left { right: auto; left: 54px; }
@@ -1031,6 +1052,11 @@ export const OVERLAY_STYLES = `
 
     .aa-panel-resize::after {
       border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .aa-pin-indicator {
+      background: #e0e0e0;
+      color: #1a1a2e;
     }
 
     .aa-snap-zone {

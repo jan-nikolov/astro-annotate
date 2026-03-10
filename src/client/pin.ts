@@ -16,6 +16,8 @@ export class PinManager {
   private clusters: Map<string, ClusterEntry> = new Map();
   private indexMap: Map<string, number> = new Map();
   private detailPopup: HTMLElement;
+  private aboveIndicator: HTMLElement;
+  private belowIndicator: HTMLElement;
   private onChanged: () => void;
   private panelSide: 'left' | 'right' | null = null;
   private activeDetailSelector: string | null = null;
@@ -28,6 +30,17 @@ export class PinManager {
     this.detailPopup.className = 'aa-pin-detail';
     this.detailPopup.style.display = 'none';
     this.shadowRoot.appendChild(this.detailPopup);
+
+    this.aboveIndicator = document.createElement('div');
+    this.aboveIndicator.className = 'aa-pin-indicator aa-pin-indicator-above';
+    this.aboveIndicator.style.display = 'none';
+    this.shadowRoot.appendChild(this.aboveIndicator);
+
+    this.belowIndicator = document.createElement('div');
+    this.belowIndicator.className = 'aa-pin-indicator aa-pin-indicator-below';
+    this.belowIndicator.style.display = 'none';
+    this.shadowRoot.appendChild(this.belowIndicator);
+
     this.onChanged = onChanged;
   }
 
@@ -106,6 +119,8 @@ export class PinManager {
     const OVERLAP_MIN = 32;
 
     const positions: { selector: string; top: number; left: number }[] = [];
+    let aboveCount = 0;
+    let belowCount = 0;
 
     for (const [selector, entry] of this.clusters) {
       const rect = entry.el.getBoundingClientRect();
@@ -117,6 +132,9 @@ export class PinManager {
         if (this.activeDetailSelector === selector) {
           this.hideDetail();
         }
+        const count = entry.annotations.length;
+        if (rect.bottom <= 0) aboveCount += count;
+        else if (rect.top >= window.innerHeight) belowCount += count;
         continue;
       }
       entry.wrapper.style.display = '';
@@ -186,6 +204,12 @@ export class PinManager {
       entry.wrapper.style.left = `${pos.left}px`;
       entry.pin.style.transform = `rotate(${rotation}deg)`;
     }
+
+    // Update off-viewport indicators
+    this.aboveIndicator.style.display = aboveCount > 0 ? 'flex' : 'none';
+    this.aboveIndicator.textContent = `\u2191 ${aboveCount}`;
+    this.belowIndicator.style.display = belowCount > 0 ? 'flex' : 'none';
+    this.belowIndicator.textContent = `\u2193 ${belowCount}`;
   }
 
   setPanelSide(panelSide: 'left' | 'right' | null): void {
@@ -337,5 +361,7 @@ export class PinManager {
   destroy(): void {
     this.clearPins();
     this.detailPopup.remove();
+    this.aboveIndicator.remove();
+    this.belowIndicator.remove();
   }
 }

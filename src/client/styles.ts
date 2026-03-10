@@ -275,6 +275,8 @@ export const OVERLAY_STYLES = `
     width: 320px;
     max-width: calc(100vw - 32px);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
   }
 
   .aa-pin-detail-header {
@@ -293,6 +295,9 @@ export const OVERLAY_STYLES = `
 
   .aa-pin-detail-body {
     padding: 16px;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
   }
 
   .aa-pin-detail-text {
@@ -364,7 +369,8 @@ export const OVERLAY_STYLES = `
 
   /* Thread Styles */
   .aa-thread-list {
-    max-height: 60vh;
+    flex: 1;
+    min-height: 0;
     overflow-y: auto;
   }
 

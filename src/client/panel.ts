@@ -413,6 +413,7 @@ export class AnnotationPanel {
     this.container.className = `aa-panel aa-panel-snapping${side === 'left' ? ' aa-panel-left' : ''}`;
     this.clearInlineStyles();
     this.resizeHandle.style.display = 'none';
+    this.render();
 
     const cleanup = () => {
       this.container.classList.remove('aa-panel-snapping');

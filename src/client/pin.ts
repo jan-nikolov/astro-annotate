@@ -219,8 +219,6 @@ export class PinManager {
 
   private showDetail(annotation: Annotation, el: Element): void {
     const num = this.indexMap.get(annotation.id) ?? 0;
-    const rect = el.getBoundingClientRect();
-    this.positionPopup(rect);
     this.activeDetailSelector = annotation.selector;
 
     const date = new Date(annotation.timestamp).toLocaleString();
@@ -244,12 +242,11 @@ export class PinManager {
       </div>
     `;
 
+    this.positionPopup(el.getBoundingClientRect());
     this.bindDetailEvents();
   }
 
   private showThread(cluster: ClusterEntry): void {
-    const rect = cluster.el.getBoundingClientRect();
-    this.positionPopup(rect);
     this.activeDetailSelector = cluster.selector;
 
     const tag = cluster.annotations[0]?.elementTag ?? '?';
@@ -285,26 +282,44 @@ export class PinManager {
       </div>
     `;
 
+    this.positionPopup(cluster.el.getBoundingClientRect());
     this.bindDetailEvents();
   }
 
   private positionPopup(rect: DOMRect): void {
-    let top = rect.bottom + 8;
-    let left = rect.left;
+    const MARGIN = 10;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
 
-    if (top + 250 > window.innerHeight) {
-      top = rect.top - 258;
+    // Make visible off-screen so we can measure actual height
+    this.detailPopup.style.top = '-9999px';
+    this.detailPopup.style.left = '-9999px';
+    this.detailPopup.style.maxHeight = '';
+    this.detailPopup.style.display = 'block';
+
+    const popupRect = this.detailPopup.getBoundingClientRect();
+    const popupHeight = popupRect.height;
+    const detailWidth = Math.min(320, vw - 32);
+
+    // Try below element, then above, then clamp to viewport
+    let top = rect.bottom + 8;
+    if (top + popupHeight > vh - MARGIN) {
+      top = rect.top - popupHeight - 8;
     }
-    const detailWidth = Math.min(320, window.innerWidth - 32);
-    if (left + detailWidth > window.innerWidth - 16) {
-      left = window.innerWidth - detailWidth - 16;
+    if (top < MARGIN) {
+      top = MARGIN;
+      // Constrain height to available viewport space
+      this.detailPopup.style.maxHeight = `${vh - MARGIN * 2}px`;
     }
-    if (top < 10) top = 10;
-    if (left < 10) left = 10;
+
+    let left = rect.left;
+    if (left + detailWidth > vw - MARGIN) {
+      left = vw - detailWidth - MARGIN;
+    }
+    if (left < MARGIN) left = MARGIN;
 
     this.detailPopup.style.top = `${top}px`;
     this.detailPopup.style.left = `${left}px`;
-    this.detailPopup.style.display = 'block';
   }
 
   private bindDetailEvents(): void {

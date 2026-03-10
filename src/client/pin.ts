@@ -2,8 +2,15 @@ import type { Annotation } from '../types.js';
 import { API_ANNOTATIONS } from '../constants.js';
 import { escapeHtml } from './utils.js';
 
+interface PinEntry {
+  pin: HTMLElement;
+  el: Element;
+  index: number;
+  annotation: Annotation;
+}
+
 export class PinManager {
-  private pins: HTMLElement[] = [];
+  private entries: Map<string, PinEntry> = new Map();
   private detailPopup: HTMLElement;
   private onChanged: () => void;
   private panelSide: 'left' | 'right' | null = null;
@@ -31,46 +38,83 @@ export class PinManager {
       pin.className = `aa-pin${annotation.status === 'resolved' ? ' aa-resolved' : ''}`;
       pin.innerHTML = `<span class="aa-pin-number">${index + 1}</span>`;
 
-      // Position pin — shift away from panel side and FAB
-      const updatePosition = () => {
-        const rect = el.getBoundingClientRect();
-        pin.style.position = 'fixed';
-        const pinTop = Math.max(0, rect.top - 10);
-        let pinLeft: number;
-        if (this.panelSide === 'right') {
-          pinLeft = Math.max(10, rect.left - 32);
-        } else {
-          pinLeft = Math.max(10, rect.right - 24);
-        }
-
-        // FAB collision check (FAB: bottom: 72px, right: 16px, 32×32)
-        const fabLeft = window.innerWidth - 48;
-        const fabTop = window.innerHeight - 104;
-        const fabRight = window.innerWidth - 16;
-        const fabBottom = window.innerHeight - 72;
-
-        if (pinTop + 28 > fabTop && pinTop < fabBottom &&
-            pinLeft + 28 > fabLeft && pinLeft < fabRight) {
-          pinLeft = fabLeft - 32;
-        }
-
-        pin.style.top = `${pinTop}px`;
-        pin.style.left = `${pinLeft}px`;
-      };
-      updatePosition();
-
       pin.addEventListener('click', (e) => {
         e.stopPropagation();
         this.showDetail(annotation, index, el);
       });
 
       this.shadowRoot.appendChild(pin);
-      this.pins.push(pin);
-
-      // Update position on scroll/resize
-      const observer = new IntersectionObserver(() => updatePosition(), { threshold: 0 });
-      observer.observe(el);
+      this.entries.set(annotation.id, { pin, el, index, annotation });
     });
+
+    this.updatePositions();
+  }
+
+  updatePositions(): void {
+    // Collect all positions first for overlap detection
+    const positions: { id: string; top: number; left: number }[] = [];
+
+    for (const [id, entry] of this.entries) {
+      const rect = entry.el.getBoundingClientRect();
+      const pinTop = Math.max(0, rect.top - 10);
+      let pinLeft: number;
+
+      // Alternate placement: even indices right side, odd indices left side
+      // If panel is open, all pins on opposite side
+      if (this.panelSide) {
+        // Panel open: all pins on opposite side
+        if (this.panelSide === 'right') {
+          pinLeft = Math.max(10, rect.left - 32);
+        } else {
+          pinLeft = Math.max(10, rect.right - 24);
+        }
+      } else {
+        // No panel: alternate sides
+        if (entry.index % 2 === 0) {
+          pinLeft = Math.max(10, rect.right - 24);
+        } else {
+          pinLeft = Math.max(10, rect.left - 32);
+        }
+      }
+
+      // FAB collision check (FAB: bottom: 72px, right: 16px, 32×32)
+      const fabLeft = window.innerWidth - 48;
+      const fabTop = window.innerHeight - 104;
+      const fabRight = window.innerWidth - 16;
+      const fabBottom = window.innerHeight - 72;
+
+      if (pinTop + 28 > fabTop && pinTop < fabBottom &&
+          pinLeft + 28 > fabLeft && pinLeft < fabRight) {
+        pinLeft = fabLeft - 32;
+      }
+
+      positions.push({ id, top: pinTop, left: pinLeft });
+    }
+
+    // Overlap detection: shift pins down if < 30px apart
+    for (let i = 0; i < positions.length; i++) {
+      for (let j = i + 1; j < positions.length; j++) {
+        const dx = Math.abs(positions[i].left - positions[j].left);
+        const dy = Math.abs(positions[i].top - positions[j].top);
+        if (dx < 30 && dy < 30) {
+          positions[j].top = positions[i].top + 32;
+        }
+      }
+    }
+
+    // Apply positions
+    for (const pos of positions) {
+      const entry = this.entries.get(pos.id);
+      if (!entry) continue;
+      entry.pin.style.position = 'fixed';
+      entry.pin.style.top = `${pos.top}px`;
+      entry.pin.style.left = `${pos.left}px`;
+    }
+  }
+
+  setPanelSide(panelSide: 'left' | 'right' | null): void {
+    this.panelSide = panelSide;
+    this.updatePositions();
   }
 
   private showDetail(annotation: Annotation, index: number, el: Element): void {
@@ -81,8 +125,9 @@ export class PinManager {
     if (top + 250 > window.innerHeight) {
       top = rect.top - 258;
     }
-    if (left + 320 > window.innerWidth) {
-      left = window.innerWidth - 330;
+    const detailWidth = Math.min(320, window.innerWidth - 32);
+    if (left + detailWidth > window.innerWidth - 16) {
+      left = window.innerWidth - detailWidth - 16;
     }
     if (top < 10) top = 10;
     if (left < 10) left = 10;
@@ -155,8 +200,10 @@ export class PinManager {
   }
 
   private clearPins(): void {
-    this.pins.forEach((pin) => pin.remove());
-    this.pins = [];
+    for (const entry of this.entries.values()) {
+      entry.pin.remove();
+    }
+    this.entries.clear();
     this.hideDetail();
   }
 

@@ -295,7 +295,7 @@ export class PinManager {
     this.detailPopup.style.top = '-9999px';
     this.detailPopup.style.left = '-9999px';
     this.detailPopup.style.maxHeight = '';
-    this.detailPopup.style.display = 'block';
+    this.detailPopup.style.display = 'flex';
 
     const popupRect = this.detailPopup.getBoundingClientRect();
     const popupHeight = popupRect.height;

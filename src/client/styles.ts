@@ -204,20 +204,32 @@ export const OVERLAY_STYLES = `
     opacity: 1;
   }
 
+  /* Pin Wrapper */
+  .aa-pin-wrapper {
+    position: fixed;
+    width: 20px;
+    height: 20px;
+    z-index: 2147483645;
+    cursor: pointer;
+  }
+
+  .aa-pin-wrapper .aa-pin {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+
   /* Pins */
   .aa-pin {
-    position: absolute;
     width: 20px;
     height: 20px;
     border-radius: 50% 50% 50% 0;
     background: #e94560;
-    cursor: pointer;
     box-shadow: 0 2px 6px rgba(233, 69, 96, 0.4);
     transition: scale 0.15s, box-shadow 0.15s;
-    z-index: 2147483645;
   }
 
-  .aa-pin:hover {
+  .aa-pin-wrapper:hover .aa-pin {
     scale: 1.15;
     box-shadow: 0 3px 10px rgba(233, 69, 96, 0.55);
   }
@@ -227,8 +239,29 @@ export const OVERLAY_STYLES = `
     box-shadow: 0 2px 6px rgba(46, 204, 113, 0.4);
   }
 
-  .aa-pin.aa-resolved:hover {
+  .aa-pin-wrapper:hover .aa-pin.aa-resolved {
     box-shadow: 0 3px 10px rgba(46, 204, 113, 0.55);
+  }
+
+  /* Pin Count Badge */
+  .aa-pin-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    background: #1a1a2e;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    line-height: 1;
+    z-index: 1;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
   }
 
   /* Pin Detail Popup */
@@ -327,6 +360,64 @@ export const OVERLAY_STYLES = `
   .aa-status-btn.aa-reopen:hover {
     background: #e94560;
     color: #fff;
+  }
+
+  /* Thread Styles */
+  .aa-thread-list {
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  .aa-thread-item {
+    padding: 12px 16px;
+    border-bottom: 1px solid #f0f0f0;
+  }
+
+  .aa-thread-item:last-child {
+    border-bottom: none;
+  }
+
+  .aa-thread-item.aa-thread-resolved {
+    opacity: 0.6;
+  }
+
+  .aa-thread-item-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    font-size: 12px;
+  }
+
+  .aa-thread-number {
+    font-weight: 700;
+    color: #e94560;
+  }
+
+  .aa-thread-resolved .aa-thread-number {
+    color: #2ecc71;
+  }
+
+  .aa-thread-author {
+    font-weight: 500;
+  }
+
+  .aa-thread-time {
+    color: #999;
+    margin-left: auto;
+    font-size: 11px;
+  }
+
+  .aa-thread-item-text {
+    font-size: 13px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    margin-bottom: 8px;
+  }
+
+  .aa-thread-item-actions {
+    display: flex;
+    gap: 6px;
   }
 
   /* Annotation Panel */
@@ -675,7 +766,8 @@ export const OVERLAY_STYLES = `
   }
 
   .aa-panel-fab.aa-fab-panel-open {
-    box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.6), 0 2px 8px rgba(0, 0, 0, 0.3);
+    background: #e94560;
+    animation: aa-fab-pulse 2s infinite;
   }
 
   @keyframes aa-fab-pulse {
@@ -899,7 +991,24 @@ export const OVERLAY_STYLES = `
     }
 
     .aa-panel-fab.aa-fab-panel-open {
-      box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.6), 0 2px 8px rgba(0, 0, 0, 0.5);
+      background: #e94560;
+    }
+
+    .aa-pin-badge {
+      background: #e0e0e0;
+      color: #1a1a2e;
+    }
+
+    .aa-thread-item {
+      border-bottom-color: #404060;
+    }
+
+    .aa-thread-item-text {
+      color: #ddd;
+    }
+
+    .aa-thread-time {
+      color: #888;
     }
 
     .aa-annotate-fab {

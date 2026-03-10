@@ -1,6 +1,6 @@
 import type { Annotation } from '../types.js';
 import { API_ANNOTATIONS } from '../constants.js';
-import { escapeHtml } from './utils.js';
+import { escapeHtml, formatTimeAgo } from './utils.js';
 import { DragResize } from './drag.js';
 
 type FilterValue = 'all' | 'open' | 'resolved';
@@ -115,10 +115,9 @@ export class AnnotationPanel {
   show(): void {
     this.visible = true;
     this.container.style.display = 'flex';
-    // FABs stay visible — hide labels to reduce clutter
-    this.annotateLabel.style.display = 'none';
-    this.label.style.display = 'none';
+    this.label.textContent = 'Esc';
     this.fab.classList.add('aa-fab-panel-open');
+    this.renderFab();
     this.render();
     this.applyMode();
     this.onVisibilityChanged();
@@ -129,9 +128,9 @@ export class AnnotationPanel {
     this.editingId = null;
     this.container.style.display = 'none';
     this.hideSnapZones();
-    this.annotateLabel.style.display = 'block';
-    this.label.style.display = 'block';
+    this.label.textContent = 'Alt+L';
     this.fab.classList.remove('aa-fab-panel-open');
+    this.renderFab();
     this.onVisibilityChanged();
   }
 
@@ -324,7 +323,7 @@ export class AnnotationPanel {
         <div class="aa-panel-item-header">
           <span class="${numberClass}">#${num}</span>
           <span class="aa-panel-item-author">${escapeHtml(annotation.author)}</span>
-          <span class="aa-panel-item-time">${this.formatTimeAgo(annotation.timestamp)}</span>
+          <span class="aa-panel-item-time">${formatTimeAgo(annotation.timestamp)}</span>
         </div>
         <span class="aa-inline-tag" title="${escapeHtml(annotation.selector)}">&lt;${escapeHtml(annotation.elementTag)}&gt;</span>
         ${textBlock}
@@ -338,10 +337,17 @@ export class AnnotationPanel {
       ? `<span class="aa-panel-fab-badge">${openCount}</span>`
       : '';
 
-    // Lower button: always speech bubble + badge
-    this.fab.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    // Lower button: X when panel open, speech bubble + badge when closed
+    if (this.visible) {
+      this.fab.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/>
+        </svg>`;
+    } else {
+      this.fab.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M2 3h12v8H5l-3 3V3z"/>
         </svg>${badge}`;
+    }
 
     // Upper button: crosshair (normal) or X (active)
     if (this.annotationModeActive) {
@@ -531,8 +537,12 @@ export class AnnotationPanel {
       case 'toggle-side':
         this.side = this.side === 'right' ? 'left' : 'right';
         this.render();
-        this.applyMode();
-        this.onVisibilityChanged();
+        if (this.mode === 'floating') {
+          this.snapToDocked(this.side);
+        } else {
+          this.applyMode();
+          this.onVisibilityChanged();
+        }
         break;
       case 'filter':
         this.filter = (actionEl.dataset.filter as FilterValue) || 'all';
@@ -672,21 +682,5 @@ export class AnnotationPanel {
   }
 
   // --- Helpers ---
-
-  private formatTimeAgo(timestamp: string): string {
-    const now = Date.now();
-    const then = new Date(timestamp).getTime();
-    if (isNaN(then)) return 'unknown';
-    const diffSec = Math.floor((now - then) / 1000);
-
-    if (diffSec < 60) return 'just now';
-    const diffMin = Math.floor(diffSec / 60);
-    if (diffMin < 60) return `${diffMin}m ago`;
-    const diffHr = Math.floor(diffMin / 60);
-    if (diffHr < 24) return `${diffHr}h ago`;
-    const diffDay = Math.floor(diffHr / 24);
-    if (diffDay < 30) return `${diffDay}d ago`;
-    return new Date(timestamp).toLocaleDateString();
-  }
 
 }

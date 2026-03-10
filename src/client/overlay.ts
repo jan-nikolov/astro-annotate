@@ -14,6 +14,7 @@ export class Overlay {
   private pinManager: PinManager;
   private panel: AnnotationPanel;
   private active = false;
+  private escapeStack: ('annotate' | 'panel')[] = [];
   private devMode = !!(window as any).__ASTRO_ANNOTATE_DEV__;
   private annotations: Annotation[] = [];
   private scrollRafId: number | null = null;
@@ -43,10 +44,20 @@ export class Overlay {
       this.devMode,
     );
     this.pinManager = new PinManager(this.shadowRoot, () => this.loadAnnotations());
+    let prevPanelVisible = false;
     this.panel = new AnnotationPanel(
       this.shadowRoot,
       () => this.loadAnnotations(),
-      () => this.renderPins(),
+      () => {
+        this.renderPins();
+        const nowVisible = this.panel.isVisible();
+        if (nowVisible && !prevPanelVisible) {
+          this.pushEscapeLayer('panel');
+        } else if (!nowVisible && prevPanelVisible) {
+          this.removeEscapeLayer('panel');
+        }
+        prevPanelVisible = nowVisible;
+      },
     );
 
     // Wire up annotate button in FAB stack
@@ -93,6 +104,7 @@ export class Overlay {
     this.active = active;
 
     if (active) {
+      this.pushEscapeLayer('annotate');
       this.form.hide();
       this.pinManager.hideDetail();
       this.panel.setAnnotationMode(true, () => {
@@ -102,6 +114,7 @@ export class Overlay {
       document.addEventListener('mousemove', this.highlighter.onMouseMove);
       document.addEventListener('click', this.onElementClick, true);
     } else {
+      this.removeEscapeLayer('annotate');
       document.removeEventListener('mousemove', this.highlighter.onMouseMove);
       document.removeEventListener('click', this.onElementClick, true);
       this.highlighter.hide();
@@ -158,15 +171,19 @@ export class Overlay {
       return;
     }
 
-    // Escape: fixed priority — form > annotation mode > panel
+    // Escape: form always first, then stack-based priority (last opened closes first)
     if (e.key === 'Escape') {
       if (this.form.isVisible()) { this.form.hide(); return; }
-      if (this.active) {
+      const top = this.escapeStack[this.escapeStack.length - 1];
+      if (top === 'panel' && this.panel.isVisible()) {
+        this.panel.hide();
+        return;
+      }
+      if (top === 'annotate' && this.active) {
         this.setActive(false);
         window.dispatchEvent(new CustomEvent('aa:state-changed', { detail: { active: false } }));
         return;
       }
-      if (this.panel.isVisible()) { this.panel.hide(); return; }
     }
   };
 
@@ -204,6 +221,15 @@ export class Overlay {
     if (this.active) {
       document.addEventListener('mousemove', this.highlighter.onMouseMove);
     }
+  }
+
+  private pushEscapeLayer(layer: 'annotate' | 'panel'): void {
+    this.escapeStack = this.escapeStack.filter(l => l !== layer);
+    this.escapeStack.push(layer);
+  }
+
+  private removeEscapeLayer(layer: 'annotate' | 'panel'): void {
+    this.escapeStack = this.escapeStack.filter(l => l !== layer);
   }
 
   getPanelState(): Record<string, unknown> {

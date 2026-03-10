@@ -1,18 +1,34 @@
 import type { Annotation } from '../types.js';
 import { API_ANNOTATIONS } from '../constants.js';
 import { escapeHtml } from './utils.js';
+import { DragResize } from './drag.js';
 
 type FilterValue = 'all' | 'open' | 'resolved';
 type SideValue = 'right' | 'left';
+type PanelMode = 'docked' | 'floating';
+
+interface FloatingState {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
 
 export class AnnotationPanel {
   private container: HTMLElement;
+  private contentWrapper: HTMLElement;
+  private resizeHandle: HTMLElement;
   private fab: HTMLElement;
   private annotateFab: HTMLElement;
   private label: HTMLElement;
+  private annotateLabel: HTMLElement;
+  private snapZoneLeft: HTMLElement;
+  private snapZoneRight: HTMLElement;
   private visible = false;
   private filter: FilterValue = 'open';
   private side: SideValue = 'right';
+  private mode: PanelMode = 'docked';
+  private floatingState: FloatingState = { x: 100, y: 100, width: 360, height: 500 };
   private editingId: string | null = null;
   private annotations: Annotation[] = [];
   private indexMap: Map<string, number> = new Map();
@@ -20,6 +36,8 @@ export class AnnotationPanel {
   private onVisibilityChanged: () => void;
   private onExitAnnotationMode: (() => void) | null = null;
   private onEnterAnnotationMode: (() => void) | null = null;
+  private annotationModeActive = false;
+  private dragResize: DragResize | null = null;
 
   constructor(
     private shadowRoot: ShadowRoot,
@@ -35,33 +53,59 @@ export class AnnotationPanel {
     this.container.style.display = 'none';
     this.container.addEventListener('click', this.onClick);
     this.container.addEventListener('keydown', this.onKeyDown);
+
+    // Content wrapper (innerHTML target — survives resize handle)
+    this.contentWrapper = document.createElement('div');
+    this.contentWrapper.style.cssText = 'display:flex;flex-direction:column;flex:1;overflow:hidden;';
+    this.container.appendChild(this.contentWrapper);
+
+    // Resize handle (sibling of content — survives re-renders)
+    this.resizeHandle = document.createElement('div');
+    this.resizeHandle.className = 'aa-panel-resize';
+    this.resizeHandle.style.display = 'none';
+    this.container.appendChild(this.resizeHandle);
+
     this.shadowRoot.appendChild(this.container);
 
-    // Annotate FAB (upper button — enters annotation mode)
+    // Snap zone indicators
+    this.snapZoneLeft = document.createElement('div');
+    this.snapZoneLeft.className = 'aa-snap-zone aa-snap-zone-left';
+    this.snapZoneLeft.style.display = 'none';
+    this.shadowRoot.appendChild(this.snapZoneLeft);
+
+    this.snapZoneRight = document.createElement('div');
+    this.snapZoneRight.className = 'aa-snap-zone aa-snap-zone-right';
+    this.snapZoneRight.style.display = 'none';
+    this.shadowRoot.appendChild(this.snapZoneRight);
+
+    // Annotate FAB (upper button — toggles annotation mode)
     this.annotateFab = document.createElement('button');
     this.annotateFab.className = 'aa-annotate-fab';
     this.annotateFab.addEventListener('click', () => {
-      if (this.onEnterAnnotationMode) {
+      if (this.annotationModeActive && this.onExitAnnotationMode) {
+        this.onExitAnnotationMode();
+      } else if (this.onEnterAnnotationMode) {
         this.onEnterAnnotationMode();
       }
     });
     this.shadowRoot.appendChild(this.annotateFab);
 
-    // Panel FAB (lower button — toggles panel / exits annotation mode)
+    // Panel FAB (lower button — toggles panel)
     this.fab = document.createElement('button');
     this.fab.className = 'aa-panel-fab';
     this.fab.addEventListener('click', () => {
-      if (this.annotationModeActive && this.onExitAnnotationMode) {
-        this.onExitAnnotationMode();
-      } else {
-        this.toggle();
-      }
+      this.toggle();
     });
     this.shadowRoot.appendChild(this.fab);
 
-    // Shortcut label next to FAB stack
+    // Shortcut labels — fixed per button
+    this.annotateLabel = document.createElement('div');
+    this.annotateLabel.className = 'aa-fab-label aa-fab-label-upper';
+    this.annotateLabel.textContent = 'Alt+C';
+    this.shadowRoot.appendChild(this.annotateLabel);
+
     this.label = document.createElement('div');
-    this.label.className = 'aa-fab-label';
+    this.label.className = 'aa-fab-label aa-fab-label-lower';
     this.label.textContent = 'Alt+L';
     this.shadowRoot.appendChild(this.label);
 
@@ -71,10 +115,12 @@ export class AnnotationPanel {
   show(): void {
     this.visible = true;
     this.container.style.display = 'flex';
-    this.fab.style.display = 'none';
-    this.annotateFab.style.display = 'none';
+    // FABs stay visible — hide labels to reduce clutter
+    this.annotateLabel.style.display = 'none';
     this.label.style.display = 'none';
+    this.fab.classList.add('aa-fab-panel-open');
     this.render();
+    this.applyMode();
     this.onVisibilityChanged();
   }
 
@@ -82,9 +128,10 @@ export class AnnotationPanel {
     this.visible = false;
     this.editingId = null;
     this.container.style.display = 'none';
-    this.fab.style.display = 'flex';
-    this.annotateFab.style.display = this.annotationModeActive ? 'none' : 'flex';
+    this.hideSnapZones();
+    this.annotateLabel.style.display = 'block';
     this.label.style.display = 'block';
+    this.fab.classList.remove('aa-fab-panel-open');
     this.onVisibilityChanged();
   }
 
@@ -108,49 +155,18 @@ export class AnnotationPanel {
     return this.side;
   }
 
-  private evadeHandler: (() => void) | null = null;
-  private evadeLeaveHandler: (() => void) | null = null;
-  private evadeTimerId: number | null = null;
-  private annotationModeActive = false;
-
-  setEvadeOnHover(enabled: boolean): void {
-    if (enabled && !this.evadeHandler) {
-      this.evadeHandler = () => {
-        this.evadeTimerId = window.setTimeout(() => {
-          this.side = this.side === 'right' ? 'left' : 'right';
-          if (this.visible) this.render();
-          this.onVisibilityChanged();
-          this.evadeTimerId = null;
-        }, 400);
-      };
-      this.evadeLeaveHandler = () => {
-        if (this.evadeTimerId !== null) {
-          clearTimeout(this.evadeTimerId);
-          this.evadeTimerId = null;
-        }
-      };
-      this.container.addEventListener('mouseenter', this.evadeHandler);
-      this.container.addEventListener('mouseleave', this.evadeLeaveHandler);
-    } else if (!enabled) {
-      if (this.evadeHandler) {
-        this.container.removeEventListener('mouseenter', this.evadeHandler);
-        this.evadeHandler = null;
-      }
-      if (this.evadeLeaveHandler) {
-        this.container.removeEventListener('mouseleave', this.evadeLeaveHandler);
-        this.evadeLeaveHandler = null;
-      }
-      if (this.evadeTimerId !== null) {
-        clearTimeout(this.evadeTimerId);
-        this.evadeTimerId = null;
-      }
-    }
+  getMode(): PanelMode {
+    return this.mode;
   }
 
   setAnnotationMode(active: boolean, onExitMode?: () => void): void {
     this.annotationModeActive = active;
     this.onExitAnnotationMode = onExitMode ?? null;
-    this.annotateFab.style.display = active ? 'none' : 'flex';
+    if (active) {
+      this.annotateFab.classList.add('aa-fab-active');
+    } else {
+      this.annotateFab.classList.remove('aa-fab-active');
+    }
     this.renderFab();
   }
 
@@ -161,16 +177,22 @@ export class AnnotationPanel {
   setSide(side: SideValue): void {
     this.side = side;
     if (this.visible) this.render();
+    this.applyMode();
     this.onVisibilityChanged();
   }
 
-  getState(): { visible: boolean; filter: FilterValue; side: SideValue } {
-    return { visible: this.visible, filter: this.filter, side: this.side };
+  getState(): { visible: boolean; filter: FilterValue; side: SideValue; mode: PanelMode; floating: FloatingState } {
+    return { visible: this.visible, filter: this.filter, side: this.side, mode: this.mode, floating: this.floatingState };
   }
 
-  restoreState(state: { visible: boolean; filter: string; side: string }): void {
+  restoreState(state: { visible: boolean; filter: string; side: string; mode?: string; floating?: FloatingState }): void {
     this.filter = (state.filter as FilterValue) || 'open';
     this.side = (state.side as SideValue) || 'right';
+    this.mode = (state.mode as PanelMode) || 'docked';
+    if (state.floating) {
+      this.floatingState = state.floating;
+      this.clampFloatingToViewport();
+    }
     if (state.visible) {
       this.show();
     }
@@ -186,16 +208,26 @@ export class AnnotationPanel {
   }
 
   destroy(): void {
-    this.setEvadeOnHover(false);
+    if (this.dragResize) {
+      this.dragResize.destroy();
+      this.dragResize = null;
+    }
     this.container.removeEventListener('click', this.onClick);
     this.container.removeEventListener('keydown', this.onKeyDown);
     this.container.remove();
     this.fab.remove();
     this.annotateFab.remove();
+    this.annotateLabel.remove();
     this.label.remove();
+    this.snapZoneLeft.remove();
+    this.snapZoneRight.remove();
   }
 
   // --- Private ---
+
+  private isMobile(): boolean {
+    return window.innerWidth < 400;
+  }
 
   private rebuildIndexMap(): void {
     this.indexMap.clear();
@@ -219,13 +251,11 @@ export class AnnotationPanel {
     const resolvedCount = this.countByStatus('resolved');
     const totalCount = this.annotations.length;
 
-    this.container.className = `aa-panel${this.side === 'left' ? ' aa-panel-left' : ''}`;
-
     const sideIcon = this.side === 'right'
       ? '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="3" y1="3" x2="3" y2="13"/><polyline points="12,5 8,8 12,11"/></svg>'
       : '<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="13" y1="3" x2="13" y2="13"/><polyline points="4,5 8,8 4,11"/></svg>';
 
-    this.container.innerHTML = `
+    this.contentWrapper.innerHTML = `
       <div class="aa-panel-header">
         <span class="aa-panel-title">Annotations (${totalCount})</span>
         <div class="aa-panel-header-actions">
@@ -253,7 +283,7 @@ export class AnnotationPanel {
 
     // Focus textarea if editing + auto-grow
     if (this.editingId) {
-      const textarea = this.container.querySelector('.aa-panel-edit-textarea') as HTMLTextAreaElement | null;
+      const textarea = this.contentWrapper.querySelector('.aa-panel-edit-textarea') as HTMLTextAreaElement | null;
       if (textarea) {
         setTimeout(() => {
           textarea.focus();
@@ -262,6 +292,8 @@ export class AnnotationPanel {
         }, 30);
       }
     }
+
+    this.setupDragResize();
   }
 
   private renderItem(annotation: Annotation): string {
@@ -306,30 +338,180 @@ export class AnnotationPanel {
       ? `<span class="aa-panel-fab-badge">${openCount}</span>`
       : '';
 
-    const icon = this.annotationModeActive
-      ? `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/>
-        </svg>`
-      : `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    // Lower button: always speech bubble + badge
+    this.fab.innerHTML = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M2 3h12v8H5l-3 3V3z"/>
-        </svg>`;
+        </svg>${badge}`;
 
-    this.fab.innerHTML = `${icon}${badge}`;
-
-    // Annotate button: crosshair icon
-    this.annotateFab.innerHTML = `
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-        <circle cx="8" cy="8" r="5"/><line x1="8" y1="1" x2="8" y2="4"/><line x1="8" y1="12" x2="8" y2="15"/><line x1="1" y1="8" x2="4" y2="8"/><line x1="12" y1="8" x2="15" y2="8"/>
-      </svg>
-    `;
-
+    // Upper button: crosshair (normal) or X (active)
     if (this.annotationModeActive) {
-      this.fab.classList.add('aa-fab-active');
-      this.label.textContent = 'Alt+C';
+      this.annotateFab.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/>
+        </svg>`;
     } else {
-      this.fab.classList.remove('aa-fab-active');
-      this.label.textContent = 'Alt+L';
+      this.annotateFab.innerHTML = `
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+          <circle cx="8" cy="8" r="5"/><line x1="8" y1="1" x2="8" y2="4"/><line x1="8" y1="12" x2="8" y2="15"/><line x1="1" y1="8" x2="4" y2="8"/><line x1="12" y1="8" x2="15" y2="8"/>
+        </svg>`;
     }
+  }
+
+  // --- Mode management ---
+
+  private applyMode(): void {
+    if (this.isMobile()) {
+      this.mode = 'docked';
+    }
+
+    if (this.mode === 'floating') {
+      this.container.className = 'aa-panel aa-panel-floating';
+      this.container.style.left = `${this.floatingState.x}px`;
+      this.container.style.top = `${this.floatingState.y}px`;
+      this.container.style.width = `${this.floatingState.width}px`;
+      this.container.style.height = `${this.floatingState.height}px`;
+      this.container.style.right = 'auto';
+      this.resizeHandle.style.display = 'block';
+    } else {
+      this.container.className = `aa-panel${this.side === 'left' ? ' aa-panel-left' : ''}`;
+      this.clearInlineStyles();
+      this.resizeHandle.style.display = 'none';
+    }
+  }
+
+  private clearInlineStyles(): void {
+    this.container.style.left = '';
+    this.container.style.top = '';
+    this.container.style.width = '';
+    this.container.style.height = '';
+    this.container.style.right = '';
+  }
+
+  private switchToFloating(): void {
+    const rect = this.container.getBoundingClientRect();
+    this.mode = 'floating';
+    this.floatingState = {
+      x: rect.left,
+      y: rect.top,
+      width: rect.width,
+      height: rect.height,
+    };
+    this.applyMode();
+  }
+
+  private snapToDocked(side: SideValue): void {
+    this.mode = 'docked';
+    this.side = side;
+
+    this.container.className = `aa-panel aa-panel-snapping${side === 'left' ? ' aa-panel-left' : ''}`;
+    this.clearInlineStyles();
+    this.resizeHandle.style.display = 'none';
+
+    const cleanup = () => {
+      this.container.classList.remove('aa-panel-snapping');
+    };
+    this.container.addEventListener('transitionend', cleanup, { once: true });
+    setTimeout(cleanup, 350);
+
+    this.onVisibilityChanged();
+  }
+
+  // --- Snap zones ---
+
+  private showSnapZones(): void {
+    this.snapZoneLeft.style.display = 'block';
+    this.snapZoneRight.style.display = 'block';
+  }
+
+  private hideSnapZones(): void {
+    this.snapZoneLeft.style.display = 'none';
+    this.snapZoneRight.style.display = 'none';
+    this.snapZoneLeft.classList.remove('aa-snap-active');
+    this.snapZoneRight.classList.remove('aa-snap-active');
+  }
+
+  private updateSnapZoneHighlight(x: number): void {
+    const SNAP_THRESHOLD = 60;
+    const rect = this.container.getBoundingClientRect();
+    this.snapZoneLeft.classList.toggle('aa-snap-active', x < SNAP_THRESHOLD);
+    this.snapZoneRight.classList.toggle('aa-snap-active', rect.right > window.innerWidth - SNAP_THRESHOLD);
+  }
+
+  // --- DragResize setup ---
+
+  private setupDragResize(): void {
+    if (this.dragResize) {
+      this.dragResize.destroy();
+      this.dragResize = null;
+    }
+
+    if (this.isMobile()) return;
+
+    const header = this.contentWrapper.querySelector('.aa-panel-header') as HTMLElement | null;
+    if (!header) return;
+
+    this.dragResize = new DragResize(
+      this.container,
+      header,
+      this.resizeHandle,
+      { minWidth: 280, minHeight: 200, visibleMargin: 60 },
+      {
+        onDragStart: () => {
+          if (this.mode === 'docked') {
+            this.switchToFloating();
+          }
+          this.container.classList.add('aa-panel-no-transition');
+          this.showSnapZones();
+        },
+        onDrag: (x, y) => {
+          this.container.style.left = `${x}px`;
+          this.container.style.top = `${y}px`;
+          this.floatingState.x = x;
+          this.floatingState.y = y;
+          this.updateSnapZoneHighlight(x);
+        },
+        onDragEnd: (x, _y) => {
+          this.container.classList.remove('aa-panel-no-transition');
+          this.hideSnapZones();
+
+          const SNAP_THRESHOLD = 60;
+          const rect = this.container.getBoundingClientRect();
+
+          if (x < SNAP_THRESHOLD) {
+            this.snapToDocked('left');
+          } else if (rect.right > window.innerWidth - SNAP_THRESHOLD) {
+            this.snapToDocked('right');
+          } else {
+            this.onVisibilityChanged();
+          }
+        },
+        onResizeStart: () => {
+          this.container.classList.add('aa-panel-no-transition');
+        },
+        onResize: (width, height) => {
+          this.container.style.width = `${width}px`;
+          this.container.style.height = `${height}px`;
+          this.floatingState.width = width;
+          this.floatingState.height = height;
+        },
+        onResizeEnd: () => {
+          this.container.classList.remove('aa-panel-no-transition');
+          this.onVisibilityChanged();
+        },
+      },
+    );
+
+    this.dragResize.enable();
+  }
+
+  private clampFloatingToViewport(): void {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const MARGIN = 60;
+    this.floatingState.x = Math.max(MARGIN - this.floatingState.width, Math.min(this.floatingState.x, vw - MARGIN));
+    this.floatingState.y = Math.max(0, Math.min(this.floatingState.y, vh - MARGIN));
+    this.floatingState.width = Math.min(this.floatingState.width, vw - 32);
+    this.floatingState.height = Math.min(this.floatingState.height, vh - 32);
   }
 
   // --- Event delegation ---
@@ -349,6 +531,7 @@ export class AnnotationPanel {
       case 'toggle-side':
         this.side = this.side === 'right' ? 'left' : 'right';
         this.render();
+        this.applyMode();
         this.onVisibilityChanged();
         break;
       case 'filter':
@@ -409,7 +592,7 @@ export class AnnotationPanel {
   }
 
   private async saveEdit(id: string): Promise<void> {
-    const textarea = this.container.querySelector(`.aa-panel-edit-textarea[data-id="${id}"]`) as HTMLTextAreaElement | null;
+    const textarea = this.contentWrapper.querySelector(`.aa-panel-edit-textarea[data-id="${id}"]`) as HTMLTextAreaElement | null;
     if (!textarea) return;
 
     const text = textarea.value.trim();

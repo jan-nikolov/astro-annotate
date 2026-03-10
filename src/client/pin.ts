@@ -36,7 +36,7 @@ export class PinManager {
 
       const pin = document.createElement('div');
       pin.className = `aa-pin${annotation.status === 'resolved' ? ' aa-resolved' : ''}`;
-      pin.innerHTML = `<span class="aa-pin-number">${index + 1}</span>`;
+      pin.innerHTML = '';
 
       pin.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -51,34 +51,30 @@ export class PinManager {
   }
 
   updatePositions(): void {
+    const PIN_SIZE = 20;
+    const OVERLAP_MIN = 32;
+
     // Collect all positions first for overlap detection
-    const positions: { id: string; top: number; left: number; side: 'left' | 'right' }[] = [];
+    const positions: { id: string; top: number; left: number }[] = [];
 
     for (const [id, entry] of this.entries) {
       const rect = entry.el.getBoundingClientRect();
       const pinTop = Math.max(0, rect.top - 10);
       let pinLeft: number;
-      let side: 'left' | 'right';
 
       // Alternate placement: even indices right side, odd indices left side
-      // If panel is open, all pins on opposite side
+      // If panel is docked, all pins on opposite side
       if (this.panelSide) {
-        // Panel open: all pins on opposite side
         if (this.panelSide === 'right') {
-          pinLeft = Math.max(10, rect.left - 32);
-          side = 'left';
+          pinLeft = Math.max(10, rect.left - PIN_SIZE - 4);
         } else {
-          pinLeft = Math.max(10, rect.right - 24);
-          side = 'right';
+          pinLeft = Math.max(10, rect.right - PIN_SIZE + 4);
         }
       } else {
-        // No panel: alternate sides
         if (entry.index % 2 === 0) {
-          pinLeft = Math.max(10, rect.right - 24);
-          side = 'right';
+          pinLeft = Math.max(10, rect.right - PIN_SIZE + 4);
         } else {
-          pinLeft = Math.max(10, rect.left - 32);
-          side = 'left';
+          pinLeft = Math.max(10, rect.left - PIN_SIZE - 4);
         }
       }
 
@@ -88,12 +84,12 @@ export class PinManager {
       const fabRight = window.innerWidth - 16;
       const fabBottom = window.innerHeight - 72;
 
-      if (pinTop + 28 > fabTop && pinTop < fabBottom &&
-          pinLeft + 28 > fabLeft && pinLeft < fabRight) {
-        pinLeft = fabLeft - 32;
+      if (pinTop + PIN_SIZE > fabTop && pinTop < fabBottom &&
+          pinLeft + PIN_SIZE > fabLeft && pinLeft < fabRight) {
+        pinLeft = fabLeft - PIN_SIZE - 8;
       }
 
-      positions.push({ id, top: pinTop, left: pinLeft, side });
+      positions.push({ id, top: pinTop, left: pinLeft });
     }
 
     // Group pins by side (left/right of viewport center) and cascade overlaps
@@ -104,23 +100,32 @@ export class PinManager {
     for (const group of [leftGroup, rightGroup]) {
       group.sort((a, b) => a.top - b.top);
       for (let i = 1; i < group.length; i++) {
-        if (group[i].top - group[i - 1].top < 40) {
-          group[i].top = group[i - 1].top + 40;
+        if (group[i].top - group[i - 1].top < OVERLAP_MIN) {
+          group[i].top = group[i - 1].top + OVERLAP_MIN;
         }
       }
     }
 
-    // Apply positions + direction classes
+    // Apply positions + atan2-based tilt
     for (const pos of positions) {
       const entry = this.entries.get(pos.id);
       if (!entry) continue;
+
+      const pinCenterX = pos.left + PIN_SIZE / 2;
+      const pinCenterY = pos.top + PIN_SIZE / 2;
+      const elRect = entry.el.getBoundingClientRect();
+      const elCenterX = elRect.left + elRect.width / 2;
+      const elCenterY = elRect.top + elRect.height / 2;
+
+      // atan2 angle from pin center to element center (screen coords: y-down)
+      const angle = Math.atan2(elCenterY - pinCenterY, elCenterX - pinCenterX) * (180 / Math.PI);
+      // Teardrop sharp corner at border-radius 0 (bottom-left) = 135° in screen coords
+      const rotation = angle - 135;
+
       entry.pin.style.position = 'fixed';
       entry.pin.style.top = `${pos.top}px`;
       entry.pin.style.left = `${pos.left}px`;
-
-      // Point toward the annotated element
-      entry.pin.classList.toggle('aa-pin-point-left', pos.side === 'right');
-      entry.pin.classList.toggle('aa-pin-point-right', pos.side === 'left');
+      entry.pin.style.transform = `rotate(${rotation}deg)`;
     }
   }
 

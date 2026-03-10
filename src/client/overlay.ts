@@ -95,7 +95,6 @@ export class Overlay {
     if (active) {
       this.form.hide();
       this.pinManager.hideDetail();
-      this.panel.setEvadeOnHover(true);
       this.panel.setAnnotationMode(true, () => {
         this.setActive(false);
         window.dispatchEvent(new CustomEvent('aa:state-changed', { detail: { active: false } }));
@@ -107,7 +106,6 @@ export class Overlay {
       document.removeEventListener('click', this.onElementClick, true);
       this.highlighter.hide();
       this.form.hide();
-      this.panel.setEvadeOnHover(false);
       this.panel.setAnnotationMode(false);
     }
   }
@@ -190,7 +188,10 @@ export class Overlay {
   }
 
   private renderPins(): void {
-    const panelSide = this.panel.isVisible() ? this.panel.getSide() : null;
+    let panelSide: 'left' | 'right' | null = null;
+    if (this.panel.isVisible() && this.panel.getMode() === 'docked') {
+      panelSide = this.panel.getSide();
+    }
     this.pinManager.render(this.annotations, panelSide);
   }
 
@@ -205,12 +206,12 @@ export class Overlay {
     }
   }
 
-  getPanelState(): { visible: boolean; filter: string; side: string } {
+  getPanelState(): Record<string, unknown> {
     return this.panel.getState();
   }
 
-  restorePanelState(state: { visible: boolean; filter: string; side: string }): void {
-    this.panel.restoreState(state);
+  restorePanelState(state: Record<string, unknown>): void {
+    this.panel.restoreState(state as { visible: boolean; filter: string; side: string; mode?: string; floating?: { x: number; y: number; width: number; height: number } });
   }
 
   destroy(): void {

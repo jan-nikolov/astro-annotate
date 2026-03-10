@@ -207,61 +207,28 @@ export const OVERLAY_STYLES = `
   /* Pins */
   .aa-pin {
     position: absolute;
-    width: 28px;
-    height: 28px;
+    width: 20px;
+    height: 20px;
     border-radius: 50% 50% 50% 0;
-    background: #d4687a;
-    color: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    font-weight: 700;
+    background: #e94560;
     cursor: pointer;
-    transform: rotate(-45deg);
-    box-shadow: 0 2px 6px rgba(212, 104, 122, 0.3);
-    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 2px 6px rgba(233, 69, 96, 0.4);
+    transition: scale 0.15s, box-shadow 0.15s;
     z-index: 2147483645;
   }
 
   .aa-pin:hover {
-    transform: rotate(-45deg) scale(1.15);
-    box-shadow: 0 3px 10px rgba(212, 104, 122, 0.45);
-  }
-
-  /* Point LEFT: pin is on right side of element */
-  .aa-pin.aa-pin-point-left {
-    transform: rotate(45deg);
-  }
-
-  .aa-pin.aa-pin-point-left:hover {
-    transform: rotate(45deg) scale(1.15);
-  }
-
-  /* Point RIGHT: pin is on left side of element */
-  .aa-pin.aa-pin-point-right {
-    transform: rotate(-135deg);
-  }
-
-  .aa-pin.aa-pin-point-right:hover {
-    transform: rotate(-135deg) scale(1.15);
+    scale: 1.15;
+    box-shadow: 0 3px 10px rgba(233, 69, 96, 0.55);
   }
 
   .aa-pin.aa-resolved {
-    background: #6abf8a;
-    box-shadow: 0 2px 6px rgba(106, 191, 138, 0.3);
+    background: #2ecc71;
+    box-shadow: 0 2px 6px rgba(46, 204, 113, 0.4);
   }
 
-  .aa-pin-number {
-    transform: rotate(45deg);
-  }
-
-  .aa-pin.aa-pin-point-left .aa-pin-number {
-    transform: rotate(-45deg);
-  }
-
-  .aa-pin.aa-pin-point-right .aa-pin-number {
-    transform: rotate(135deg);
+  .aa-pin.aa-resolved:hover {
+    box-shadow: 0 3px 10px rgba(46, 204, 113, 0.55);
   }
 
   /* Pin Detail Popup */
@@ -402,6 +369,68 @@ export const OVERLAY_STYLES = `
     }
   }
 
+  /* Floating panel mode */
+  .aa-panel-floating {
+    transition: none;
+    height: auto;
+  }
+
+  .aa-panel-no-transition {
+    transition: none !important;
+  }
+
+  .aa-panel-snapping {
+    transition: left 0.25s ease, top 0.25s ease, width 0.25s ease, height 0.25s ease;
+  }
+
+  /* Resize handle */
+  .aa-panel-resize {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    width: 16px;
+    height: 16px;
+    cursor: nwse-resize;
+    z-index: 1;
+  }
+
+  .aa-panel-resize::after {
+    content: '';
+    position: absolute;
+    bottom: 3px;
+    right: 3px;
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid rgba(0, 0, 0, 0.2);
+    border-bottom: 2px solid rgba(0, 0, 0, 0.2);
+  }
+
+  /* Snap zone indicator */
+  .aa-snap-zone {
+    position: fixed;
+    top: 0;
+    width: 60px;
+    height: 100vh;
+    border: 2px dashed rgba(233, 69, 96, 0.3);
+    background: rgba(233, 69, 96, 0.05);
+    z-index: 2147483646;
+    opacity: 0;
+    transition: opacity 0.15s;
+    pointer-events: none;
+  }
+
+  .aa-snap-zone-left {
+    left: 0;
+  }
+
+  .aa-snap-zone-right {
+    right: 0;
+  }
+
+  .aa-snap-zone.aa-snap-active {
+    opacity: 1;
+  }
+
   .aa-panel-header {
     background: #1a1a2e;
     color: #fff;
@@ -410,6 +439,11 @@ export const OVERLAY_STYLES = `
     justify-content: space-between;
     align-items: center;
     flex-shrink: 0;
+    cursor: grab;
+  }
+
+  .aa-panel-header:active {
+    cursor: grabbing;
   }
 
   .aa-panel-title {
@@ -640,6 +674,10 @@ export const OVERLAY_STYLES = `
     animation: aa-fab-pulse 2s infinite;
   }
 
+  .aa-panel-fab.aa-fab-panel-open {
+    box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.6), 0 2px 8px rgba(0, 0, 0, 0.3);
+  }
+
   @keyframes aa-fab-pulse {
     0%, 100% { box-shadow: 0 2px 8px rgba(233, 69, 96, 0.4); }
     50% { box-shadow: 0 2px 16px rgba(233, 69, 96, 0.7); }
@@ -686,10 +724,14 @@ export const OVERLAY_STYLES = `
     background: #e94560;
   }
 
-  /* FAB Shortcut Label */
+  .aa-annotate-fab.aa-fab-active {
+    background: #e94560;
+    animation: aa-fab-pulse 2s infinite;
+  }
+
+  /* FAB Shortcut Labels */
   .aa-fab-label {
     position: fixed;
-    bottom: 76px;
     right: 54px;
     z-index: 2147483647;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -700,6 +742,14 @@ export const OVERLAY_STYLES = `
     border-radius: 4px;
     pointer-events: none;
     white-space: nowrap;
+  }
+
+  .aa-fab-label-upper {
+    bottom: 116px;
+  }
+
+  .aa-fab-label-lower {
+    bottom: 76px;
   }
 
   /* Dark mode */
@@ -848,6 +898,10 @@ export const OVERLAY_STYLES = `
       background: #e94560;
     }
 
+    .aa-panel-fab.aa-fab-panel-open {
+      box-shadow: 0 0 0 2px rgba(233, 69, 96, 0.6), 0 2px 8px rgba(0, 0, 0, 0.5);
+    }
+
     .aa-annotate-fab {
       background: #2d2d3f;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
@@ -860,6 +914,15 @@ export const OVERLAY_STYLES = `
     .aa-fab-label {
       color: #777;
       background: rgba(255, 255, 255, 0.08);
+    }
+
+    .aa-panel-resize::after {
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .aa-snap-zone {
+      border-color: rgba(233, 69, 96, 0.4);
+      background: rgba(233, 69, 96, 0.08);
     }
   }
 `;

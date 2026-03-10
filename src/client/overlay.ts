@@ -17,6 +17,9 @@ export class Overlay {
   private devMode = !!(window as any).__ASTRO_ANNOTATE_DEV__;
   private annotations: Annotation[] = [];
   private lastOpenedUI: 'panel' | 'form' | null = null;
+  private scrollRafId: number | null = null;
+  private onScroll: () => void;
+  private onResize: () => void;
 
   constructor() {
     // Create host element
@@ -61,16 +64,21 @@ export class Overlay {
       }
     });
 
-    // Update pin positions on scroll
-    let scrollTimeout: ReturnType<typeof setTimeout>;
-    window.addEventListener('scroll', () => {
-      clearTimeout(scrollTimeout);
-      scrollTimeout = setTimeout(() => this.renderPins(), 50);
-    }, { passive: true });
+    // Update pin positions on scroll (rAF-throttled)
+    this.onScroll = () => {
+      if (this.scrollRafId === null) {
+        this.scrollRafId = requestAnimationFrame(() => {
+          this.pinManager.updatePositions();
+          this.scrollRafId = null;
+        });
+      }
+    };
+    window.addEventListener('scroll', this.onScroll, { passive: true });
 
-    window.addEventListener('resize', () => {
-      this.renderPins();
-    }, { passive: true });
+    this.onResize = () => {
+      this.pinManager.updatePositions();
+    };
+    window.addEventListener('resize', this.onResize, { passive: true });
 
     // Keyboard shortcuts
     document.addEventListener('keydown', this.onKeyDown);
@@ -82,6 +90,7 @@ export class Overlay {
     if (active) {
       this.form.hide();
       this.pinManager.hideDetail();
+      if (this.panel.isVisible()) this.panel.setCompact(true);
       document.addEventListener('mousemove', this.highlighter.onMouseMove);
       document.addEventListener('click', this.onElementClick);
     } else {
@@ -89,6 +98,7 @@ export class Overlay {
       document.removeEventListener('click', this.onElementClick);
       this.highlighter.hide();
       this.form.hide();
+      this.panel.setCompact(false);
     }
   }
 
@@ -107,6 +117,19 @@ export class Overlay {
 
     e.preventDefault();
     e.stopPropagation();
+
+    // Auto-switch panel side if element is behind the panel
+    if (this.panel.isVisible()) {
+      const panelSide = this.panel.getSide();
+      const rect = target.getBoundingClientRect();
+      const panelWidth = 280; // compact width
+
+      if (panelSide === 'right' && rect.right > window.innerWidth - panelWidth - 16) {
+        this.panel.setSide('left');
+      } else if (panelSide === 'left' && rect.left < panelWidth + 16) {
+        this.panel.setSide('right');
+      }
+    }
 
     // Hide highlight and show form
     this.highlighter.hide();
@@ -209,6 +232,11 @@ export class Overlay {
   destroy(): void {
     document.removeEventListener('keydown', this.onKeyDown);
     window.removeEventListener('aa:toggle', this.onToolbarToggle);
+    window.removeEventListener('scroll', this.onScroll);
+    window.removeEventListener('resize', this.onResize);
+    if (this.scrollRafId !== null) {
+      cancelAnimationFrame(this.scrollRafId);
+    }
     if (this.active) {
       window.dispatchEvent(new CustomEvent('aa:state-changed', { detail: { active: false } }));
     }

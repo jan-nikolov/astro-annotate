@@ -59,10 +59,8 @@ export class AnnotationForm {
     const arrowLeft = Math.max(16, Math.min(elementCenter - left - 6, inputWidth - 28));
     const arrowClass = placeAbove ? 'aa-inline-arrow aa-inline-arrow-bottom' : 'aa-inline-arrow aa-inline-arrow-top';
 
-    // Build tag label
-    const tagLabel = elementText
-      ? `&lt;${escapeHtml(elementTag)}&gt; ${escapeHtml(elementText)}`
-      : `&lt;${escapeHtml(elementTag)}&gt;`;
+    // Build tag label (tag only, selector shown as tooltip)
+    const tagLabel = `&lt;${escapeHtml(elementTag)}&gt;`;
 
     this.container.innerHTML = `
       <div class="${arrowClass}" style="left: ${arrowLeft}px"></div>
@@ -79,11 +77,16 @@ export class AnnotationForm {
       </div>
     `;
 
-    // Auto-resize textarea
+    // Auto-resize textarea + reposition if overflowing viewport
     const textarea = this.container.querySelector('[data-field="text"]') as HTMLTextAreaElement;
     textarea.addEventListener('input', () => {
       textarea.style.height = 'auto';
       textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+      const containerRect = this.container.getBoundingClientRect();
+      if (containerRect.bottom > window.innerHeight - 16) {
+        const overflow = containerRect.bottom - window.innerHeight + 16;
+        this.container.style.top = (parseFloat(this.container.style.top) - overflow) + 'px';
+      }
     });
 
     // Focus textarea (or author field if present)

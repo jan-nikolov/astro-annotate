@@ -8,6 +8,7 @@ type SideValue = 'right' | 'left';
 export class AnnotationPanel {
   private container: HTMLElement;
   private fab: HTMLElement;
+  private label: HTMLElement;
   private visible = false;
   private filter: FilterValue = 'open';
   private side: SideValue = 'right';
@@ -16,6 +17,7 @@ export class AnnotationPanel {
   private indexMap: Map<string, number> = new Map();
   private onChanged: () => void;
   private onVisibilityChanged: () => void;
+  private onExitAnnotationMode: (() => void) | null = null;
 
   constructor(
     private shadowRoot: ShadowRoot,
@@ -36,8 +38,20 @@ export class AnnotationPanel {
     // Floating action button
     this.fab = document.createElement('button');
     this.fab.className = 'aa-panel-fab';
-    this.fab.addEventListener('click', () => this.toggle());
+    this.fab.addEventListener('click', () => {
+      if (this.annotationModeActive && this.onExitAnnotationMode) {
+        this.onExitAnnotationMode();
+      } else {
+        this.toggle();
+      }
+    });
     this.shadowRoot.appendChild(this.fab);
+
+    // Shortcut label next to FAB
+    this.label = document.createElement('div');
+    this.label.className = 'aa-fab-label';
+    this.label.textContent = 'Alt+L';
+    this.shadowRoot.appendChild(this.label);
 
     this.renderFab();
   }
@@ -45,6 +59,8 @@ export class AnnotationPanel {
   show(): void {
     this.visible = true;
     this.container.style.display = 'flex';
+    this.fab.style.display = 'none';
+    this.label.style.display = 'none';
     this.render();
     this.onVisibilityChanged();
   }
@@ -53,6 +69,8 @@ export class AnnotationPanel {
     this.visible = false;
     this.editingId = null;
     this.container.style.display = 'none';
+    this.fab.style.display = 'flex';
+    this.label.style.display = 'block';
     this.onVisibilityChanged();
   }
 
@@ -76,13 +94,49 @@ export class AnnotationPanel {
     return this.side;
   }
 
-  setCompact(compact: boolean): void {
-    if (compact) {
-      this.container.classList.add('aa-panel-compact');
-    } else {
-      this.container.classList.remove('aa-panel-compact');
+  private evadeHandler: (() => void) | null = null;
+  private evadeLeaveHandler: (() => void) | null = null;
+  private evadeTimerId: number | null = null;
+  private annotationModeActive = false;
+
+  setEvadeOnHover(enabled: boolean): void {
+    if (enabled && !this.evadeHandler) {
+      this.evadeHandler = () => {
+        this.evadeTimerId = window.setTimeout(() => {
+          this.side = this.side === 'right' ? 'left' : 'right';
+          if (this.visible) this.render();
+          this.onVisibilityChanged();
+          this.evadeTimerId = null;
+        }, 400);
+      };
+      this.evadeLeaveHandler = () => {
+        if (this.evadeTimerId !== null) {
+          clearTimeout(this.evadeTimerId);
+          this.evadeTimerId = null;
+        }
+      };
+      this.container.addEventListener('mouseenter', this.evadeHandler);
+      this.container.addEventListener('mouseleave', this.evadeLeaveHandler);
+    } else if (!enabled) {
+      if (this.evadeHandler) {
+        this.container.removeEventListener('mouseenter', this.evadeHandler);
+        this.evadeHandler = null;
+      }
+      if (this.evadeLeaveHandler) {
+        this.container.removeEventListener('mouseleave', this.evadeLeaveHandler);
+        this.evadeLeaveHandler = null;
+      }
+      if (this.evadeTimerId !== null) {
+        clearTimeout(this.evadeTimerId);
+        this.evadeTimerId = null;
+      }
     }
-    this.onVisibilityChanged();
+  }
+
+  setAnnotationMode(active: boolean, onExitMode?: () => void): void {
+    this.annotationModeActive = active;
+    this.onExitAnnotationMode = onExitMode ?? null;
+    this.renderFab();
   }
 
   setSide(side: SideValue): void {
@@ -113,10 +167,12 @@ export class AnnotationPanel {
   }
 
   destroy(): void {
+    this.setEvadeOnHover(false);
     this.container.removeEventListener('click', this.onClick);
     this.container.removeEventListener('keydown', this.onKeyDown);
     this.container.remove();
     this.fab.remove();
+    this.label.remove();
   }
 
   // --- Private ---
@@ -218,7 +274,7 @@ export class AnnotationPanel {
           <span class="aa-panel-item-author">${escapeHtml(annotation.author)}</span>
           <span class="aa-panel-item-time">${this.formatTimeAgo(annotation.timestamp)}</span>
         </div>
-        <div class="aa-panel-item-selector">${escapeHtml(annotation.selector)}</div>
+        <span class="aa-inline-tag" title="${escapeHtml(annotation.selector)}">&lt;${escapeHtml(annotation.elementTag)}&gt;</span>
         ${textBlock}
       </div>
     `;
@@ -229,12 +285,24 @@ export class AnnotationPanel {
     const badge = openCount > 0
       ? `<span class="aa-panel-fab-badge">${openCount}</span>`
       : '';
-    this.fab.innerHTML = `
-      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
-        <line x1="2" y1="4" x2="14" y2="4"/><line x1="2" y1="8" x2="14" y2="8"/><line x1="2" y1="12" x2="10" y2="12"/>
-      </svg>
-      ${badge}
-    `;
+
+    const icon = this.annotationModeActive
+      ? `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/>
+        </svg>`
+      : `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 3h12v8H5l-3 3V3z"/>
+        </svg>`;
+
+    this.fab.innerHTML = `${icon}${badge}`;
+
+    if (this.annotationModeActive) {
+      this.fab.classList.add('aa-fab-active');
+      this.label.textContent = 'Alt+C';
+    } else {
+      this.fab.classList.remove('aa-fab-active');
+      this.label.textContent = 'Alt+L';
+    }
   }
 
   // --- Event delegation ---

@@ -91,13 +91,16 @@ export class PinManager {
       positions.push({ id, top: pinTop, left: pinLeft });
     }
 
-    // Overlap detection: shift pins down if < 30px apart
-    for (let i = 0; i < positions.length; i++) {
-      for (let j = i + 1; j < positions.length; j++) {
-        const dx = Math.abs(positions[i].left - positions[j].left);
-        const dy = Math.abs(positions[i].top - positions[j].top);
-        if (dx < 30 && dy < 30) {
-          positions[j].top = positions[i].top + 32;
+    // Group pins by side (left/right of viewport center) and cascade overlaps
+    const midX = window.innerWidth / 2;
+    const leftGroup = positions.filter(p => p.left < midX);
+    const rightGroup = positions.filter(p => p.left >= midX);
+
+    for (const group of [leftGroup, rightGroup]) {
+      group.sort((a, b) => a.top - b.top);
+      for (let i = 1; i < group.length; i++) {
+        if (group[i].top - group[i - 1].top < 40) {
+          group[i].top = group[i - 1].top + 40;
         }
       }
     }
@@ -149,7 +152,7 @@ export class PinManager {
       <div class="aa-pin-detail-body">
         <div class="aa-pin-detail-text">${escapeHtml(annotation.text)}</div>
         <div class="aa-pin-detail-info">
-          <div class="aa-pin-detail-selector">${escapeHtml(annotation.selector)}</div>
+          <span class="aa-inline-tag" title="${escapeHtml(annotation.selector)}">&lt;${escapeHtml(annotation.elementTag)}&gt;</span>
         </div>
       </div>
       <div class="aa-pin-detail-actions">

@@ -16,7 +16,6 @@ export class Overlay {
   private active = false;
   private devMode = !!(window as any).__ASTRO_ANNOTATE_DEV__;
   private annotations: Annotation[] = [];
-  private lastOpenedUI: 'panel' | 'form' | null = null;
   private scrollRafId: number | null = null;
   private onScroll: () => void;
   private onResize: () => void;
@@ -90,15 +89,20 @@ export class Overlay {
     if (active) {
       this.form.hide();
       this.pinManager.hideDetail();
-      if (this.panel.isVisible()) this.panel.setCompact(true);
+      this.panel.setEvadeOnHover(true);
+      this.panel.setAnnotationMode(true, () => {
+        this.setActive(false);
+        window.dispatchEvent(new CustomEvent('aa:state-changed', { detail: { active: false } }));
+      });
       document.addEventListener('mousemove', this.highlighter.onMouseMove);
-      document.addEventListener('click', this.onElementClick);
+      document.addEventListener('click', this.onElementClick, true);
     } else {
       document.removeEventListener('mousemove', this.highlighter.onMouseMove);
-      document.removeEventListener('click', this.onElementClick);
+      document.removeEventListener('click', this.onElementClick, true);
       this.highlighter.hide();
       this.form.hide();
-      this.panel.setCompact(false);
+      this.panel.setEvadeOnHover(false);
+      this.panel.setAnnotationMode(false);
     }
   }
 
@@ -118,25 +122,11 @@ export class Overlay {
     e.preventDefault();
     e.stopPropagation();
 
-    // Auto-switch panel side if element is behind the panel
-    if (this.panel.isVisible()) {
-      const panelSide = this.panel.getSide();
-      const rect = target.getBoundingClientRect();
-      const panelWidth = 280; // compact width
-
-      if (panelSide === 'right' && rect.right > window.innerWidth - panelWidth - 16) {
-        this.panel.setSide('left');
-      } else if (panelSide === 'left' && rect.left < panelWidth + 16) {
-        this.panel.setSide('right');
-      }
-    }
-
     // Hide highlight and show form
     this.highlighter.hide();
     document.removeEventListener('mousemove', this.highlighter.onMouseMove);
 
     this.form.show(target);
-    this.lastOpenedUI = 'form';
   };
 
   private onKeyDown = (e: KeyboardEvent): void => {
@@ -161,30 +151,18 @@ export class Overlay {
       if (this.panel.isEditing()) return;
       e.preventDefault();
       this.panel.toggle();
-      this.lastOpenedUI = this.panel.isVisible() ? 'panel' : null;
       return;
     }
 
-    // Escape: close most recently opened UI first
+    // Escape: fixed priority — form > annotation mode > panel
     if (e.key === 'Escape') {
-      if (this.lastOpenedUI === 'form' && this.form.isVisible()) {
-        this.form.hide();
-        this.lastOpenedUI = this.panel.isVisible() ? 'panel' : null;
-        return;
-      }
-      if (this.lastOpenedUI === 'panel' && this.panel.isVisible()) {
-        this.panel.hide();
-        this.lastOpenedUI = this.form.isVisible() ? 'form' : null;
-        return;
-      }
-      // Fallback: close whatever is visible
-      if (this.panel.isVisible()) { this.panel.hide(); return; }
       if (this.form.isVisible()) { this.form.hide(); return; }
       if (this.active) {
         this.setActive(false);
         window.dispatchEvent(new CustomEvent('aa:state-changed', { detail: { active: false } }));
         return;
       }
+      if (this.panel.isVisible()) { this.panel.hide(); return; }
     }
   };
 

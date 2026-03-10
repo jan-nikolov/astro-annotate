@@ -340,7 +340,8 @@ export const OVERLAY_STYLES = `
   .aa-panel {
     position: fixed;
     top: 16px;
-    right: 16px;
+    right: auto;
+    left: calc(100vw - 360px - 16px);
     width: 360px;
     max-width: calc(100vw - 32px);
     height: calc(100vh - 32px);
@@ -355,30 +356,23 @@ export const OVERLAY_STYLES = `
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-size: 14px;
     color: #1a1a2e;
-    transition: width 0.2s ease;
+    transition: left 0.25s ease;
   }
 
   .aa-panel.aa-panel-left {
-    right: auto;
     left: 16px;
     box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
-  }
-
-  .aa-panel.aa-panel-compact {
-    width: 280px;
-    max-width: calc(100vw - 32px);
   }
 
   @media (max-width: 400px) {
     .aa-panel {
       width: calc(100vw - 16px);
-      right: 8px;
       left: 8px;
       border-radius: 8px;
     }
 
     .aa-panel.aa-panel-left {
-      right: 8px;
+      left: 8px;
     }
   }
 
@@ -615,6 +609,16 @@ export const OVERLAY_STYLES = `
     background: #2a2a40;
   }
 
+  .aa-panel-fab.aa-fab-active {
+    background: #e94560;
+    animation: aa-fab-pulse 2s infinite;
+  }
+
+  @keyframes aa-fab-pulse {
+    0%, 100% { box-shadow: 0 2px 8px rgba(233, 69, 96, 0.4); }
+    50% { box-shadow: 0 2px 16px rgba(233, 69, 96, 0.7); }
+  }
+
   .aa-panel-fab-badge {
     position: absolute;
     top: -4px;
@@ -630,6 +634,22 @@ export const OVERLAY_STYLES = `
     align-items: center;
     justify-content: center;
     line-height: 1;
+  }
+
+  /* FAB Shortcut Label */
+  .aa-fab-label {
+    position: fixed;
+    bottom: 76px;
+    right: 54px;
+    z-index: 2147483647;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 10px;
+    color: #999;
+    background: rgba(0, 0, 0, 0.06);
+    padding: 2px 6px;
+    border-radius: 4px;
+    pointer-events: none;
+    white-space: nowrap;
   }
 
   /* Dark mode */
@@ -772,6 +792,15 @@ export const OVERLAY_STYLES = `
 
     .aa-panel-fab:hover {
       background: #404060;
+    }
+
+    .aa-panel-fab.aa-fab-active {
+      background: #e94560;
+    }
+
+    .aa-fab-label {
+      color: #777;
+      background: rgba(255, 255, 255, 0.08);
     }
   }
 `;
